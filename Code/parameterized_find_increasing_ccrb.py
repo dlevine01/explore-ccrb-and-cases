@@ -243,14 +243,14 @@ normalize_by_selected = st.radio(
 )
 
 reference_start_year, reference_end_year = st.slider(
-    label='Reference years:',
+    label='Reference years (annual mean):',
     min_value=2000,
     max_value=2023,
     value=(2015,2021)
 )
 
 focus_start_year, focus_end_year = st.slider(
-    label='Focus years:',
+    label='Focus years (annual mean):',
     min_value=2000,
     max_value=2023,
     value=(2022,2023)
@@ -258,9 +258,9 @@ focus_start_year, focus_end_year = st.slider(
 
 minimum_instances_threshold = st.slider(
     label='Hide precincts/commands without this many complaints in at least one year of either period',
-    min_value=10,
+    min_value=0,
     max_value=25,
-    value=0
+    value=2
 )
 
 ## filter and summarize data
@@ -349,20 +349,27 @@ change_by_precinct_filtered_to_more_than_threshold_instances = (
     ]
 )
 
+title = f"""
+#### {'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}\n
+#### Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}\n
+{'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}
+"""
+
+st.markdown(title)
 
 st.dataframe(
     change_by_precinct_filtered_to_more_than_threshold_instances
     .reset_index()
     .rename(columns={
         'command_normalized':'Precinct/command',
-        'reference_years':'Reference years',
-        'focus_years':'Focus years',
+        'reference_years':'Reference years (annual mean)',
+        'focus_years':'Focus years (annual mean)',
         'pct_change':'Pct change'
     })
     .set_index('Precinct/command')
     .style.format({
-        'Reference years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
-        'Focus years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+        'Reference years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+        'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
         'Pct change':'{:.0%}'
     })
 )
