@@ -256,6 +256,13 @@ focus_start_year, focus_end_year = st.slider(
     value=(2022,2023)
 )
 
+minimum_instances_threshold = st.slider(
+    label='Hide precincts/commands without this many complaints in at least one year of either period',
+    min_value=10,
+    max_value=25,
+    value=0
+)
+
 ## filter and summarize data
 
 fado_type_filter = (
@@ -277,7 +284,7 @@ normalizer = (
     else 1
 )
 
-subset_aggregation = (
+count_by_year_by_command = (
     ccrb_allegations
     [
         fado_type_filter
@@ -293,19 +300,23 @@ subset_aggregation = (
     ])
     ['Complaint Id']
     .nunique()
+)
+
+normalized_by_year_by_command = (
+    count_by_year_by_command
     .div(normalizer)
 )
 
 change_by_precinct = (
     (
-        subset_aggregation
+        normalized_by_year_by_command
         .loc[reference_start_year:reference_end_year]
         .groupby('command_normalized')
         .mean()
         .rename('reference_years')
         .to_frame()
     ).join(
-        subset_aggregation
+        normalized_by_year_by_command
         .loc[focus_start_year:focus_end_year]
         .groupby('command_normalized')
         .mean()
@@ -315,11 +326,32 @@ change_by_precinct = (
     .assign(
         pct_change = lambda row: row.pct_change(axis=1)['focus_years'],
     )
+    .dropna(subset='pct_change')
     .sort_values('pct_change',ascending=False)
 )
 
-st.dataframe(
+change_by_precinct_filtered_to_more_than_threshold_instances = (
     change_by_precinct
+    [
+        (
+            count_by_year_by_command
+            .loc[reference_start_year:reference_end_year]
+            .groupby('command_normalized')
+            .max()
+            .ge(minimum_instances_threshold)
+        ) & (
+            count_by_year_by_command
+            .loc[focus_start_year:focus_end_year]
+            .groupby('command_normalized')
+            .max()
+            .ge(minimum_instances_threshold)
+        )
+    ]
+)
+
+
+st.dataframe(
+    change_by_precinct_filtered_to_more_than_threshold_instances
     .style.format({
         'reference_years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.0f}',
         'focus_years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.0f}',
@@ -328,7 +360,7 @@ st.dataframe(
 )
 
 simple_map = (
-    change_by_precinct
+    change_by_precinct_filtered_to_more_than_threshold_instances
     .reset_index()
     .pipe(alt.Chart)
     .mark_geoshape()
