@@ -12,7 +12,7 @@ FADO_TYPES = (
         'Untruthful Statement'
     )
 
-@st.cache_data
+@st.cache_data(show_spinner='Loading CCRB records...')
 def load_ccrb():
 
     ccrb_allegations = pd.read_csv(
@@ -62,7 +62,7 @@ def load_ccrb():
 
     return ccrb_allegations
 
-@st.cache_data
+@st.cache_data(show_spinner='Loading precincts map...')
 def load_precincts():
     precincts = (
         gpd.read_file('https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=pgeojson')
@@ -74,7 +74,7 @@ def load_precincts():
 
     return precincts
     
-@st.cache_data
+@st.cache_data(show_spinner='Loading officers roster...')
 def load_officers_by_command():
     roster = pd.read_csv(
         'https://data.cityofnewyork.us/api/views/2fir-qns4/rows.csv?date=20231205&accessType=DOWNLOAD',
@@ -120,6 +120,14 @@ def load_officers_by_command():
 
     return active_officers_by_command
 
+@st.cache_data(show_spinner='Loading crime rates...')
+def load_index_crimes():
+    return (
+       pd.read_csv('Data/Processed Data/index_crimes_by_precinct_2023.csv')
+        .rename(columns={'precinct':'command_normalized'})
+        .set_index('command_normalized')
+        ['index_crimes_2023']
+    )
 
 ccrb_allegations = load_ccrb()
 precincts = load_precincts()
@@ -133,6 +141,7 @@ active_officers_by_command = (
         .values
     )
 )
+index_crimes = load_index_crimes()
 
 ## select options
 
@@ -149,7 +158,11 @@ substantiated_only_selected = st.toggle(
 
 normalize_by_selected = st.radio(
     label='Normalize by:',
-    options=('None','Currently active officers')
+    options=(
+        'None',
+        'Currently active officers',
+        'Index crimes'
+    )
 )
 
 reference_start_year, reference_end_year = st.slider(
@@ -182,8 +195,8 @@ substantiated_filter = (
 )
 
 normalizer = (
-    active_officers_by_command 
-    if normalize_by_selected == 'Currently active officers' 
+    active_officers_by_command if normalize_by_selected == 'Currently active officers' 
+    else index_crimes if normalize_by_selected == 'Index crimes'
     else 1
 )
 
@@ -233,6 +246,9 @@ st.dataframe(
     .style.format({
         'reference_years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.0f}',
         'focus_years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.0f}',
-        'pct_change':'{:.1%}'
+        'pct_change':'{:.0%}'
     })
 )
+
+
+
