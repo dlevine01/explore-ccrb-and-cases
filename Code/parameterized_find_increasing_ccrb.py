@@ -352,10 +352,18 @@ change_by_precinct_filtered_to_more_than_threshold_instances = (
 
 st.dataframe(
     change_by_precinct_filtered_to_more_than_threshold_instances
+    .reset_index()
+    .rename(columns={
+        'command_normalized':'Precinct/command',
+        'reference_years':'Reference years',
+        'focus_years':'Focus years',
+        'pct_change':'Pct change'
+    })
+    .set_index('Precinct/command')
     .style.format({
-        'reference_years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.0f}',
-        'focus_years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.0f}',
-        'pct_change':'{:.0%}'
+        'Reference years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+        'Focus years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+        'Pct change':'{:.0%}'
     })
 )
 
@@ -373,15 +381,20 @@ simple_map = (
     ).encode(
         color=alt.Color(
             'pct_change:Q',
+            title='Pct change',
             scale=alt.Scale(scheme='purpleorange', domainMid=0),
             legend=alt.Legend(
                 format='.0%'
             )
         ),
         tooltip=[
-            'command_normalized:N',
+            alt.Tooltip(
+                'command_normalized:N',
+                title='Precinct'
+            ),
             alt.Tooltip(
                 'pct_change:Q',
+                title='Pct change',
                 format='.0%'
             )
         ]
