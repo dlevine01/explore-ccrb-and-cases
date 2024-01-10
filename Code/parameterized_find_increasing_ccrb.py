@@ -228,4 +228,11 @@ change_by_precinct = (
     .sort_values('pct_change',ascending=False)
 )
 
-st.dataframe(change_by_precinct)
+st.dataframe(
+    change_by_precinct
+    .style.format({
+        'reference_years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.0f}',
+        'focus_years':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.0f}',
+        'pct_change':'{:.1%}'
+    })
+)
