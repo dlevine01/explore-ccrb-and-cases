@@ -375,6 +375,12 @@ st.dataframe(
 )
 
 simple_map = (
+    alt.Chart(precincts)
+    .mark_geoshape(
+        color='white',
+        stroke='lightgrey'
+    )
+) + (
     change_by_precinct_filtered_to_more_than_threshold_instances
     .reset_index()
     .pipe(alt.Chart)
