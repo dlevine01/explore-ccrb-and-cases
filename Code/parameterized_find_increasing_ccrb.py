@@ -62,8 +62,15 @@ def load_ccrb():
 
     return ccrb_allegations
 
-# @st.cache_data(show_spinner='Loading precincts map...')
-# def load_precincts():
+@st.cache_data(show_spinner='Loading precincts map...')
+def load_precincts():
+    return (
+        alt.Data(
+            url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson',
+            format=alt.DataFormat(property='features')
+        )
+    )
+
 #     precincts = (
 #         gpd.read_file('https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=pgeojson')
 #         .set_index('Precinct')
@@ -130,7 +137,7 @@ def load_index_crimes():
     )
 
 ccrb_allegations = load_ccrb()
-# precincts = load_precincts()
+precincts = load_precincts()
 active_officers_by_command = (
     load_officers_by_command()
     .reindex(
@@ -258,10 +265,7 @@ simple_map = (
     .transform_lookup(
         lookup='command_normalized',
         from_=alt.LookupData(
-            data=alt.Data(
-                url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson',
-                format=alt.DataFormat(property='features')
-            ),
+            data=precincts,
             key='properties.Precinct',
             fields=['type','geometry'])
     ).encode(
