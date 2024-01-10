@@ -62,17 +62,17 @@ def load_ccrb():
 
     return ccrb_allegations
 
-@st.cache_data(show_spinner='Loading precincts map...')
-def load_precincts():
-    precincts = (
-        gpd.read_file('https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=pgeojson')
-        .set_index('Precinct')
-        .drop(columns=['OBJECTID','Shape__Area','Shape__Length'])
-    )
+# @st.cache_data(show_spinner='Loading precincts map...')
+# def load_precincts():
+#     precincts = (
+#         gpd.read_file('https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=*&outSR=4326&f=pgeojson')
+#         .set_index('Precinct')
+#         .drop(columns=['OBJECTID','Shape__Area','Shape__Length'])
+#     )
 
-    assert precincts.is_valid.all()
+#     assert precincts.is_valid.all()
 
-    return precincts
+#     return precincts
     
 @st.cache_data(show_spinner='Loading officers roster...')
 def load_officers_by_command():
@@ -130,7 +130,7 @@ def load_index_crimes():
     )
 
 ccrb_allegations = load_ccrb()
-precincts = load_precincts()
+# precincts = load_precincts()
 active_officers_by_command = (
     load_officers_by_command()
     .reindex(
@@ -250,5 +250,40 @@ st.dataframe(
     })
 )
 
+simple_map = (
+    change_by_precinct
+    .reset_index()
+    .pipe(alt.Chart)
+    .mark_geoshape()
+    .transform_lookup(
+        lookup='command_normalized',
+        from_=alt.LookupData(
+            data=alt.Data(
+                url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson',
+                format=alt.DataFormat(property='features')
+            ),
+            key='properties.Precinct',
+            fields=['type','geometry'])
+    ).encode(
+        color=alt.Color(
+            'pct_change:Q',
+            scale=alt.Scale(scheme='purpleorange', domainMid=0),
+            legend=alt.Legend(
+                format='.0%'
+            )
+        ),
+        tooltip=[
+            'command_normalized:N',
+            alt.Tooltip(
+                'pct_change:Q',
+                format='.0%'
+            )
+        ]
+    ).project(
+        type='mercator'
+    )
+)
+
+st.altair_chart(simple_map)
 
 
