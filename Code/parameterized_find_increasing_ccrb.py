@@ -240,438 +240,449 @@ index_crimes = load_index_crimes()
 cases = load_cases()
 
 
-## select options
+## layout
 
-fado_types_selected = st.multiselect(
-    label='FADO types:',
-    options=FADO_TYPES,
-    default=FADO_TYPES
-)
+ccrb_column, cases_column = st.columns(2, gap='large')
 
-substantiated_only_selected = st.toggle(
-    label='Substantiated complaints only',
-    value=False
-)
+with ccrb_column:
 
-normalize_by_selected = st.radio(
-    label='Normalize by:',
-    options=(
-        'None',
-        'Currently active officers',
-        'Index crimes'
+    with st.expander(label='Options'):
+
+    ## select options
+    
+        fado_types_selected = st.multiselect(
+            label='FADO types:',
+            options=FADO_TYPES,
+            default=FADO_TYPES
+        )
+
+        substantiated_only_selected = st.toggle(
+            label='Substantiated complaints only',
+            value=False
+        )
+
+        normalize_by_selected = st.radio(
+            label='Normalize by:',
+            options=(
+                'None',
+                'Currently active officers',
+                'Index crimes'
+            )
+        )
+
+        reference_start_year, reference_end_year = st.slider(
+            label='Reference years (annual mean):',
+            min_value=2000,
+            max_value=2023,
+            value=(2015,2021)
+        )
+
+        focus_start_year, focus_end_year = st.slider(
+            label='Focus years (annual mean):',
+            min_value=2000,
+            max_value=2023,
+            value=(2022,2023)
+        )
+
+        minimum_instances_threshold = st.slider(
+            label='Hide precincts/commands without this many complaints in at least one year of either period',
+            min_value=0,
+            max_value=25,
+            value=2
+        )
+
+        geographic_precincts_only_selector = st.toggle(
+            label='Show geographic precincts only (exclude other commands e.g. Narcotics)',
+            value=False
+        )
+
+    ## filter and summarize data
+
+    fado_type_filter = (
+        ccrb_allegations
+        ['FADO Type']
+        .isin(fado_types_selected)
     )
-)
 
-reference_start_year, reference_end_year = st.slider(
-    label='Reference years (annual mean):',
-    min_value=2000,
-    max_value=2023,
-    value=(2015,2021)
-)
-
-focus_start_year, focus_end_year = st.slider(
-    label='Focus years (annual mean):',
-    min_value=2000,
-    max_value=2023,
-    value=(2022,2023)
-)
-
-minimum_instances_threshold = st.slider(
-    label='Hide precincts/commands without this many complaints in at least one year of either period',
-    min_value=0,
-    max_value=25,
-    value=2
-)
-
-geographic_precincts_only_selector = st.toggle(
-    label='Show geographic precincts only (exclude other commands e.g. Narcotics)',
-    value=False
-)
-
-## filter and summarize data
-
-fado_type_filter = (
-    ccrb_allegations
-    ['FADO Type']
-    .isin(fado_types_selected)
-)
-
-substantiated_filter = (
-    ccrb_allegations['CCRB disposition substantiated'] 
-    if substantiated_only_selected 
-    else 
-    [True] * len(ccrb_allegations)
-)
-
-normalizer = (
-    active_officers_by_command if normalize_by_selected == 'Currently active officers' 
-    else index_crimes if normalize_by_selected == 'Index crimes'
-    else 1
-)
-
-count_by_year_by_command = (
-    ccrb_allegations
-    [
-        fado_type_filter
-        &
-        substantiated_filter
-    ]
-    .assign(
-        incident_year = lambda row: row['Incident Date'].dt.year
+    substantiated_filter = (
+        ccrb_allegations['CCRB disposition substantiated'] 
+        if substantiated_only_selected 
+        else 
+        [True] * len(ccrb_allegations)
     )
-    .groupby([
-        'incident_year',
-        'command_normalized'
-    ])
-    ['Complaint Id']
-    .nunique()
-    .rename('count_complaints')
-)
 
-normalized_by_year_by_command = (
-    count_by_year_by_command
-    .div(normalizer)
-)
-
-change_by_precinct = (
-    (
-        normalized_by_year_by_command
-        .loc[reference_start_year:reference_end_year]
-        .groupby('command_normalized')
-        .mean()
-        .rename('reference_years')
-        .to_frame()
-    ).join(
-        normalized_by_year_by_command
-        .loc[focus_start_year:focus_end_year]
-        .groupby('command_normalized')
-        .mean()
-        .rename('focus_years')
+    normalizer = (
+        active_officers_by_command if normalize_by_selected == 'Currently active officers' 
+        else index_crimes if normalize_by_selected == 'Index crimes'
+        else 1
     )
-    .fillna(0)
-    .assign(
-        pct_change = lambda row: row.pct_change(axis=1)['focus_years'],
-    )
-    .dropna(subset='pct_change')
-    .sort_values('pct_change',ascending=False)
-)
 
-if geographic_precincts_only_selector:
+    count_by_year_by_command = (
+        ccrb_allegations
+        [
+            fado_type_filter
+            &
+            substantiated_filter
+        ]
+        .assign(
+            incident_year = lambda row: row['Incident Date'].dt.year
+        )
+        .groupby([
+            'incident_year',
+            'command_normalized'
+        ])
+        ['Complaint Id']
+        .nunique()
+        .rename('count_complaints')
+    )
+
+    normalized_by_year_by_command = (
+        count_by_year_by_command
+        .div(normalizer)
+    )
+
     change_by_precinct = (
-        change_by_precinct
-        .loc[PRECINCTS]
+        (
+            normalized_by_year_by_command
+            .loc[reference_start_year:reference_end_year]
+            .groupby('command_normalized')
+            .mean()
+            .rename('reference_years')
+            .to_frame()
+        ).join(
+            normalized_by_year_by_command
+            .loc[focus_start_year:focus_end_year]
+            .groupby('command_normalized')
+            .mean()
+            .rename('focus_years')
+        )
+        .fillna(0)
+        .assign(
+            pct_change = lambda row: row.pct_change(axis=1)['focus_years'],
+        )
+        .dropna(subset='pct_change')
         .sort_values('pct_change',ascending=False)
     )
 
-
-change_by_precinct_filtered_to_more_than_threshold_instances = (
-    change_by_precinct
-    [
-        (
-            count_by_year_by_command
-            .loc[reference_start_year:reference_end_year]
-            .groupby('command_normalized')
-            .max()
-            .ge(minimum_instances_threshold)
-        ) & (
-            count_by_year_by_command
-            .loc[focus_start_year:focus_end_year]
-            .groupby('command_normalized')
-            .max()
-            .ge(minimum_instances_threshold)
+    if geographic_precincts_only_selector:
+        change_by_precinct = (
+            change_by_precinct
+            .loc[PRECINCTS]
+            .sort_values('pct_change',ascending=False)
         )
-    ]
-)
 
-complaints_title = f"""
-#### {'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}\n
-#### Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}\n
-{'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}\n
-{'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}
-"""
 
-st.markdown(complaints_title)
-
-st.dataframe(
-    change_by_precinct_filtered_to_more_than_threshold_instances
-    .reset_index()
-    .rename(columns={
-        'command_normalized':'Precinct/command',
-        'reference_years':'Reference years (annual mean)',
-        'focus_years':'Focus years (annual mean)',
-        'pct_change':'Pct change'
-    })
-    .set_index('Precinct/command')
-    .style.format({
-        'Reference years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
-        'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
-        'Pct change':'{:.0%}'
-    })
-)
-
-simple_map = (
-    alt.Chart(precincts)
-    .mark_geoshape(
-        color='white',
-        stroke='lightgrey'
-    )
-) + (
-    alt.Chart(
-        precincts
-    )
-    .transform_calculate(
-        command_normalized = 'toString(datum.properties.Precinct)'
-    )
-    .transform_lookup(
-        lookup='command_normalized',
-        from_=alt.LookupData(
-            data=change_by_precinct_filtered_to_more_than_threshold_instances.reset_index(),
-            key='command_normalized',
-            fields=['pct_change']
-        )
-    )
-    .mark_geoshape()
-    .encode(
-        color=alt.Color(
-            'pct_change:Q',
-            title='Pct change',
-            scale=alt.Scale(scheme='purpleorange', domainMid=0),
-            legend=alt.Legend(
-                format='.0%'
+    change_by_precinct_filtered_to_more_than_threshold_instances = (
+        change_by_precinct
+        [
+            (
+                count_by_year_by_command
+                .loc[reference_start_year:reference_end_year]
+                .groupby('command_normalized')
+                .max()
+                .ge(minimum_instances_threshold)
+            ) & (
+                count_by_year_by_command
+                .loc[focus_start_year:focus_end_year]
+                .groupby('command_normalized')
+                .max()
+                .ge(minimum_instances_threshold)
             )
-        ),
-        tooltip=[
-            alt.Tooltip(
-                'command_normalized:N',
-                title='Precinct'
-            ),
-            alt.Tooltip(
+        ]
+    )
+
+    complaints_title = f"""
+    #### {'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}\n
+    #### Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}\n
+    {'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}\n
+    {'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}
+    """
+
+    st.markdown(complaints_title)
+
+    st.dataframe(
+        change_by_precinct_filtered_to_more_than_threshold_instances
+        .reset_index()
+        .rename(columns={
+            'command_normalized':'Precinct/command',
+            'reference_years':'Reference years (annual mean)',
+            'focus_years':'Focus years (annual mean)',
+            'pct_change':'Pct change'
+        })
+        .set_index('Precinct/command')
+        .style.format({
+            'Reference years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+            'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+            'Pct change':'{:.0%}'
+        })
+    )
+
+    simple_map = (
+        alt.Chart(precincts)
+        .mark_geoshape(
+            color='white',
+            stroke='lightgrey'
+        )
+    ) + (
+        alt.Chart(
+            precincts
+        )
+        .transform_calculate(
+            command_normalized = 'toString(datum.properties.Precinct)'
+        )
+        .transform_lookup(
+            lookup='command_normalized',
+            from_=alt.LookupData(
+                data=change_by_precinct_filtered_to_more_than_threshold_instances.reset_index(),
+                key='command_normalized',
+                fields=['pct_change']
+            )
+        )
+        .mark_geoshape()
+        .encode(
+            color=alt.Color(
                 'pct_change:Q',
                 title='Pct change',
-                format='.0%'
-            )
-        ]
-    ).project(
-        type='mercator'
-    )
-)
-
-st.altair_chart(simple_map)
-
-top_10_precincts = (
-    change_by_precinct_filtered_to_more_than_threshold_instances
-    .head(10)
-    .index
-)
-
-
-top_10_trend_line_chart = (
-    normalized_by_year_by_command
-    .loc[reference_start_year:focus_end_year,top_10_precincts]
-    .reset_index()
-    .where(lambda row: row['command_normalized'] != 'nan').dropna()
-    # .dropna(subset='command_normalized')
-    .pipe(alt.Chart)
-    .mark_line(
-        point='transparent'
-    )
-    .encode(
-        x=alt.X(
-            'incident_year:Q',
-            title='Incident year',
-            axis=alt.Axis(
-                format='.0f',
-                tickMinStep=1
-            )
-        ),
-        y=alt.Y(
-            'count_complaints:Q',
-            title='Complaints'
-        ),
-        color=alt.Color(
-            'command_normalized:N',
-            title='Precinct/command'
-        ),
-        tooltip=[
-            alt.Tooltip(
-                'command_normalized',
-                title='Precinct/command'
+                scale=alt.Scale(scheme='purpleorange', domainMid=0),
+                legend=alt.Legend(
+                    format='.0%'
+                )
             ),
-            alt.Tooltip(
-                'count_complaints',
-                title='Complaints'
-            )
-        ]
+            tooltip=[
+                alt.Tooltip(
+                    'command_normalized:N',
+                    title='Precinct'
+                ),
+                alt.Tooltip(
+                    'pct_change:Q',
+                    title='Pct change',
+                    format='.0%'
+                )
+            ]
+        ).project(
+            type='mercator'
+        )
     )
-)
 
-ranges = pd.DataFrame({
-    'start':[reference_start_year, focus_start_year],
-    'end':[reference_end_year, focus_end_year],
-    'range':['Reference years','Focus years']
-})
+    st.altair_chart(simple_map)
 
-shading = (
-        alt.Chart(ranges)
-        .mark_rect(
-            opacity=0.1
+    top_10_precincts = (
+        change_by_precinct_filtered_to_more_than_threshold_instances
+        .head(10)
+        .index
+    )
+
+
+    top_10_trend_line_chart = (
+        normalized_by_year_by_command
+        .loc[reference_start_year:focus_end_year,top_10_precincts]
+        .reset_index()
+        .where(lambda row: row['command_normalized'] != 'nan').dropna()
+        # .dropna(subset='command_normalized')
+        .pipe(alt.Chart)
+        .mark_line(
+            point='transparent'
         )
         .encode(
-            x='start:Q',
-            x2='end:Q',
-            y=alt.value(0),
-            y2=alt.value(250),
+            x=alt.X(
+                'incident_year:Q',
+                title='Incident year',
+                axis=alt.Axis(
+                    format='.0f',
+                    tickMinStep=1
+                )
+            ),
+            y=alt.Y(
+                'count_complaints:Q',
+                title='Complaints'
+            ),
             color=alt.Color(
-                'range',
-                # legend=None
-            ),
-            tooltip=alt.value(None)
-        )
-    )
-
-# st.altair_chart(top_10_trend_line_chart)
-
-st.altair_chart(
-    (top_10_trend_line_chart + shading)
-    .resolve_scale(
-        color='independent'    
-    ),
-    use_container_width=True
-)
-
-
-## case selection options
-
-with_settlement_only_selected = st.toggle(
-    label='With settlement payment only',
-    value=False
-)
-
-# case types filter
-
-case_summary_selected = st.radio(
-    label='Summarize cases by:',
-    options=(
-        'Count of cases',
-        'Settlement grand total',
-        'Median settlement'
-    ),
-    horizontal=True
-)
-
-## summarize cases
-
-if with_settlement_only_selected:
-    cases_subset = (
-        cases
-        [
-            cases['Total City Payout AMT'] > 0
-        ]
-    )
-
-else:
-    cases_subset = cases.copy(deep=True)
-
-
-if case_summary_selected == 'Count of cases':
-
-    cases_summary = (
-        cases_subset
-        .groupby('command_normalized')
-        .size()
-        .sort_values(ascending=False)
-        .rename(case_summary_selected)
-    )
-
-elif case_summary_selected == 'Settlement grand total':
-
-    cases_summary = (
-        cases_subset
-        .groupby('command_normalized')
-        ['Total City Payout AMT']
-        .sum()
-        .sort_values(ascending=False)
-        .rename(case_summary_selected)
-    )
-
-elif case_summary_selected == 'Median settlement':
-
-    cases_summary = (
-        cases_subset
-        .groupby('command_normalized')
-        ['Total City Payout AMT']
-        .median()
-        .sort_values(ascending=False)
-        .rename(case_summary_selected)
-    )
-
-complaints_title = f"""
-#### {case_summary_selected} by precinct
-{'Showing only cases with settlement payment' if with_settlement_only_selected else ''}\n
-"""
-
-st.markdown(complaints_title)
-
-st.dataframe(
-    cases_summary
-    .reset_index()
-    .rename(columns={
-        'command_normalized':'Precinct/command',
-    })
-    .set_index('Precinct/command')
-    .style.format({
-        'Count of cases':'{:,.0f}',
-        'Settlement grand total':'$ {:,.2f}',
-        'Median settlement':'$ {:,.2f}'
-    })
-)
-
-cases_map = (
-    alt.Chart(precincts)
-    .mark_geoshape(
-        color='white',
-        stroke='lightgrey'
-    )
-) + (
-    alt.Chart(
-        precincts
-    )
-    .transform_calculate(
-        command_normalized = 'toString(datum.properties.Precinct)'
-    )
-    .transform_lookup(
-        lookup='command_normalized',
-        from_=alt.LookupData(
-            data=cases_summary.reset_index(),
-            key='command_normalized',
-            fields=[case_summary_selected]
-        )
-    )
-    .mark_geoshape()
-    .encode(
-        color=alt.Color(
-            f'{case_summary_selected}:Q',
-            title=case_summary_selected,
-            scale=alt.Scale(scheme='purplered'),
-            # legend=alt.Legend(
-            #     format='.0%'
-            # )
-        ),
-        tooltip=[
-            alt.Tooltip(
                 'command_normalized:N',
-                title='Precinct'
+                title='Precinct/command'
             ),
-            alt.Tooltip(
-                f'{case_summary_selected}:Q',
-                # title='Pct change',
-                # format='.0%'
-            )
-        ]
-    ).project(
-        type='mercator'
+            tooltip=[
+                alt.Tooltip(
+                    'command_normalized',
+                    title='Precinct/command'
+                ),
+                alt.Tooltip(
+                    'count_complaints',
+                    title='Complaints'
+                )
+            ]
+        )
     )
-)
 
-st.altair_chart(cases_map)
+    ranges = pd.DataFrame({
+        'start':[reference_start_year, focus_start_year],
+        'end':[reference_end_year, focus_end_year],
+        'range':['Reference years','Focus years']
+    })
+
+    shading = (
+            alt.Chart(ranges)
+            .mark_rect(
+                opacity=0.1
+            )
+            .encode(
+                x='start:Q',
+                x2='end:Q',
+                y=alt.value(0),
+                y2=alt.value(250),
+                color=alt.Color(
+                    'range',
+                    # legend=None
+                ),
+                tooltip=alt.value(None)
+            )
+        )
+
+    # st.altair_chart(top_10_trend_line_chart)
+
+    st.altair_chart(
+        (top_10_trend_line_chart + shading)
+        .resolve_scale(
+            color='independent'    
+        ),
+        use_container_width=True
+    )
+
+with cases_column:
+
+    with st.expander(label='Options'):
+
+        ## case selection options
+
+        with_settlement_only_selected = st.toggle(
+            label='With settlement payment only',
+            value=False
+        )
+
+        # case types filter
+
+        case_summary_selected = st.radio(
+            label='Summarize cases by:',
+            options=(
+                'Count of cases',
+                'Settlement grand total',
+                'Median settlement'
+            ),
+            horizontal=True
+        )
+
+    ## summarize cases
+
+    if with_settlement_only_selected:
+        cases_subset = (
+            cases
+            [
+                cases['Total City Payout AMT'] > 0
+            ]
+        )
+
+    else:
+        cases_subset = cases.copy(deep=True)
+
+
+    if case_summary_selected == 'Count of cases':
+
+        cases_summary = (
+            cases_subset
+            .groupby('command_normalized')
+            .size()
+            .sort_values(ascending=False)
+            .rename(case_summary_selected)
+        )
+
+    elif case_summary_selected == 'Settlement grand total':
+
+        cases_summary = (
+            cases_subset
+            .groupby('command_normalized')
+            ['Total City Payout AMT']
+            .sum()
+            .sort_values(ascending=False)
+            .rename(case_summary_selected)
+        )
+
+    elif case_summary_selected == 'Median settlement':
+
+        cases_summary = (
+            cases_subset
+            .groupby('command_normalized')
+            ['Total City Payout AMT']
+            .median()
+            .sort_values(ascending=False)
+            .rename(case_summary_selected)
+        )
+
+    complaints_title = f"""
+    #### {case_summary_selected} by precinct
+    {'Showing only cases with settlement payment' if with_settlement_only_selected else ''}\n
+    """
+
+    st.markdown(complaints_title)
+
+    st.dataframe(
+        cases_summary
+        .reset_index()
+        .rename(columns={
+            'command_normalized':'Precinct/command',
+        })
+        .set_index('Precinct/command')
+        .style.format({
+            'Count of cases':'{:,.0f}',
+            'Settlement grand total':'$ {:,.2f}',
+            'Median settlement':'$ {:,.2f}'
+        })
+    )
+
+    cases_map = (
+        alt.Chart(precincts)
+        .mark_geoshape(
+            color='white',
+            stroke='lightgrey'
+        )
+    ) + (
+        alt.Chart(
+            precincts
+        )
+        .transform_calculate(
+            command_normalized = 'toString(datum.properties.Precinct)'
+        )
+        .transform_lookup(
+            lookup='command_normalized',
+            from_=alt.LookupData(
+                data=cases_summary.reset_index(),
+                key='command_normalized',
+                fields=[case_summary_selected]
+            )
+        )
+        .mark_geoshape()
+        .encode(
+            color=alt.Color(
+                f'{case_summary_selected}:Q',
+                title=case_summary_selected,
+                scale=alt.Scale(scheme='purplered'),
+                # legend=alt.Legend(
+                #     format='.0%'
+                # )
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    'command_normalized:N',
+                    title='Precinct'
+                ),
+                alt.Tooltip(
+                    f'{case_summary_selected}:Q',
+                    # title='Pct change',
+                    # format='.0%'
+                )
+            ]
+        ).project(
+            type='mercator'
+        )
+    )
+
+    st.altair_chart(cases_map)
 
