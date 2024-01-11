@@ -383,14 +383,14 @@ change_by_precinct_filtered_to_more_than_threshold_instances = (
     ]
 )
 
-title = f"""
+complaints_title = f"""
 #### {'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}\n
 #### Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}\n
 {'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}\n
 {'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}
 """
 
-st.markdown(title)
+st.markdown(complaints_title)
 
 st.dataframe(
     change_by_precinct_filtered_to_more_than_threshold_instances
@@ -607,6 +607,13 @@ elif case_summary_selected == 'Median settlement':
         .sort_values(ascending=False)
         .rename(case_summary_selected)
     )
+
+complaints_title = f"""
+#### {case_summary_selected} by precinct
+{'Showing only cases with settlement payment' if with_settlement_only_selected else ''}\n
+"""
+
+st.markdown(complaints_title)
 
 st.dataframe(
     cases_summary
