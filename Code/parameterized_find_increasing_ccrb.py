@@ -417,10 +417,7 @@ simple_map = (
     )
 ) + (
     alt.Chart(
-        alt.Data(
-            url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson',
-            format=alt.DataFormat(property='features')
-        )
+        precincts
     )
     .transform_calculate(
         command_normalized = 'toString(datum.properties.Precinct)'
@@ -629,7 +626,6 @@ st.dataframe(
     })
 )
 
-
 cases_map = (
     alt.Chart(precincts)
     .mark_geoshape(
@@ -638,10 +634,7 @@ cases_map = (
     )
 ) + (
     alt.Chart(
-        alt.Data(
-            url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson',
-            format=alt.DataFormat(property='features')
-        )
+        precincts
     )
     .transform_calculate(
         command_normalized = 'toString(datum.properties.Precinct)'
