@@ -243,63 +243,92 @@ active_officers_by_command = (
 index_crimes = load_index_crimes()
 cases = load_cases()
 
-
 ## layout
+
+## options sidebar
+
+with st.sidebar:
+
+    ## select options
+
+    st.markdown('''
+    ### CCRB complaints options
+    ''')
+    
+    fado_types_selected = st.multiselect(
+        label='FADO types:',
+        options=FADO_TYPES,
+        default=FADO_TYPES
+    )
+
+    substantiated_only_selected = st.toggle(
+        label='Substantiated complaints only',
+        value=False
+    )
+
+    normalize_by_selected = st.radio(
+        label='Normalize by:',
+        options=(
+            'None',
+            'Currently active officers',
+            'Index crimes'
+        )
+    )
+
+    reference_start_year, reference_end_year = st.slider(
+        label='Reference years (annual mean):',
+        min_value=2000,
+        max_value=2023,
+        value=(2014,2020)
+    )
+
+    focus_start_year, focus_end_year = st.slider(
+        label='Focus years (annual mean):',
+        min_value=2000,
+        max_value=2023,
+        value=(2021,2023)
+    )
+
+    minimum_instances_threshold = st.slider(
+        label='Hide precincts/commands without this many complaints in at least one year of either period',
+        min_value=0,
+        max_value=25,
+        value=3
+    )
+
+    geographic_precincts_only_selector = st.toggle(
+        label='Show geographic precincts only (exclude other commands e.g. Narcotics)',
+        value=False
+    )
+
+    st.markdown('''
+    ### Cases/litigation options
+    ''')
+
+    ## case selection options
+
+    with_settlement_only_selected = st.toggle(
+        label='With settlement payment only',
+        value=False
+    )
+
+    # case types filter
+
+    case_summary_selected = st.radio(
+        label='Summarize cases by:',
+        options=(
+            'Count of cases',
+            'Settlement grand total',
+            'Median settlement'
+        ),
+        horizontal=True
+    )
+
 
 ccrb_column, cases_column = st.columns(2, gap='large')
 
 with ccrb_column:
-
-    with st.expander(label='Options'):
-
-    ## select options
-    
-        fado_types_selected = st.multiselect(
-            label='FADO types:',
-            options=FADO_TYPES,
-            default=FADO_TYPES
-        )
-
-        substantiated_only_selected = st.toggle(
-            label='Substantiated complaints only',
-            value=False
-        )
-
-        normalize_by_selected = st.radio(
-            label='Normalize by:',
-            options=(
-                'None',
-                'Currently active officers',
-                'Index crimes'
-            )
-        )
-
-        reference_start_year, reference_end_year = st.slider(
-            label='Reference years (annual mean):',
-            min_value=2000,
-            max_value=2023,
-            value=(2014,2020)
-        )
-
-        focus_start_year, focus_end_year = st.slider(
-            label='Focus years (annual mean):',
-            min_value=2000,
-            max_value=2023,
-            value=(2021,2023)
-        )
-
-        minimum_instances_threshold = st.slider(
-            label='Hide precincts/commands without this many complaints in at least one year of either period',
-            min_value=0,
-            max_value=25,
-            value=3
-        )
-
-        geographic_precincts_only_selector = st.toggle(
-            label='Show geographic precincts only (exclude other commands e.g. Narcotics)',
-            value=False
-        )
-
+  
     ## filter and summarize data
 
     fado_type_filter = (
@@ -340,10 +369,23 @@ with ccrb_column:
         .rename('count_complaints')
     )
 
+    st.dataframe(count_by_year_by_command)
+
+    st.dataframe(normalizer)
+
+    st.write(normalizer.index.dtypes)
+
+    st.dataframe(
+        count_by_year_by_command
+        .div(normalizer)
+    )
+
     normalized_by_year_by_command = (
         count_by_year_by_command
         .div(normalizer)
     )
+
+    st.dataframe(normalized_by_year_by_command)
 
     change_by_precinct = (
         (
@@ -374,7 +416,6 @@ with ccrb_column:
             .loc[PRECINCTS]
             .sort_values('pct_change',ascending=False)
         )
-
 
     change_by_precinct_filtered_to_more_than_threshold_instances = (
         change_by_precinct
@@ -421,7 +462,7 @@ with ccrb_column:
         })
     )
 
-    simple_map = (
+    complaints_map = (
         alt.Chart(precincts)
         .mark_geoshape(
             color='white',
@@ -468,7 +509,7 @@ with ccrb_column:
         )
     )
 
-    st.altair_chart(simple_map)
+    st.altair_chart(complaints_map)
 
     top_10_precincts = (
         change_by_precinct_filtered_to_more_than_threshold_instances
@@ -552,27 +593,6 @@ with ccrb_column:
     )
 
 with cases_column:
-
-    with st.expander(label='Options'):
-
-        ## case selection options
-
-        with_settlement_only_selected = st.toggle(
-            label='With settlement payment only',
-            value=False
-        )
-
-        # case types filter
-
-        case_summary_selected = st.radio(
-            label='Summarize cases by:',
-            options=(
-                'Count of cases',
-                'Settlement grand total',
-                'Median settlement'
-            ),
-            horizontal=True
-        )
 
     ## summarize cases
 
