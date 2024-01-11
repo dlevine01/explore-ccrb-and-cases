@@ -12,6 +12,16 @@ FADO_TYPES = (
         'Untruthful Statement'
     )
 
+PRECINCTS = ['1', '5', '6', '7', '9', '10', '13', '14', '17', '18', '19', '20', '22',
+       '23', '24', '25', '26', '28', '30', '32', '33', '34', '40', '41', '42',
+       '43', '44', '45', '46', '47', '48', '49', '50', '52', '60', '61', '62',
+       '63', '66', '67', '68', '69', '70', '71', '72', '73', '75', '76', '77',
+       '78', '79', '81', '83', '84', '88', '90', '94', '100', '101', '102',
+       '103', '104', '105', '106', '107', '108', '109', '110', '111', '112',
+       '113', '114', '115', '120', '121', '122', '123']
+
+
+
 @st.cache_data(show_spinner='Loading CCRB records...')
 def load_ccrb():
 
@@ -209,6 +219,11 @@ def load_index_crimes():
         ['index_crimes_2023']
     )
 
+@st.cache_data(show_spinner='Loading cases...')
+def load_cases():
+    return pd.read_parquet('Data/Processed Data/cases_dates_locations.parquet')
+
+
 ccrb_allegations = load_ccrb()
 precincts = load_precincts()
 active_officers_by_command = (
@@ -222,6 +237,8 @@ active_officers_by_command = (
     )
 )
 index_crimes = load_index_crimes()
+cases = load_cases()
+
 
 ## select options
 
@@ -232,7 +249,7 @@ fado_types_selected = st.multiselect(
 )
 
 substantiated_only_selected = st.toggle(
-    label='Substantiated only:',
+    label='Substantiated complaints only',
     value=False
 )
 
@@ -264,6 +281,11 @@ minimum_instances_threshold = st.slider(
     min_value=0,
     max_value=25,
     value=2
+)
+
+geographic_precincts_only_selector = st.toggle(
+    label='Show geographic precincts only (exclude other commands e.g. Narcotics)',
+    value=False
 )
 
 ## filter and summarize data
@@ -334,6 +356,14 @@ change_by_precinct = (
     .sort_values('pct_change',ascending=False)
 )
 
+if geographic_precincts_only_selector:
+    change_by_precinct = (
+        change_by_precinct
+        .loc[PRECINCTS]
+        .sort_values('pct_change',ascending=False)
+    )
+
+
 change_by_precinct_filtered_to_more_than_threshold_instances = (
     change_by_precinct
     [
@@ -356,6 +386,7 @@ change_by_precinct_filtered_to_more_than_threshold_instances = (
 title = f"""
 #### {'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}\n
 #### Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}\n
+{'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}\n
 {'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}
 """
 
@@ -430,7 +461,6 @@ simple_map = (
 
 st.altair_chart(simple_map)
 
-
 top_10_precincts = (
     change_by_precinct_filtered_to_more_than_threshold_instances
     .head(10)
@@ -496,7 +526,7 @@ shading = (
             y2=alt.value(250),
             color=alt.Color(
                 'range',
-                legend=None
+                # legend=None
             ),
             tooltip=alt.value(None)
         )
@@ -510,5 +540,24 @@ st.altair_chart(
         color='independent'    
     ),
     use_container_width=True
+)
+
+
+## case selection options
+
+with_settlement_only_selected = st.toggle(
+    label='With settlement payment only',
+    value=False
+)
+
+# case types filter
+
+case_sum_or_median_selected = st.radio(
+    label='summarize cases',
+    options=(
+        'Grand total',
+        'Median'
+    ),
+    horizontal=True
 )
 
