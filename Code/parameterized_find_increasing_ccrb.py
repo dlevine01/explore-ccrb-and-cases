@@ -440,7 +440,7 @@ top_10_precincts = (
 
 top_10_trend_line_chart = (
     normalized_by_year_by_command
-    .loc[:,top_10_precincts]
+    .loc[reference_start_year:focus_end_year,top_10_precincts]
     .reset_index()
     .where(lambda row: row['command_normalized'] != 'nan').dropna()
     # .dropna(subset='command_normalized')
@@ -450,8 +450,12 @@ top_10_trend_line_chart = (
     )
     .encode(
         x=alt.X(
-            'incident_year:O',
-            title='Incident year'
+            'incident_year:Q',
+            title='Incident year',
+            axis=alt.Axis(
+                format='.0f',
+                tickMinStep=1
+            )
         ),
         y=alt.Y(
             'count_complaints:Q',
@@ -474,8 +478,36 @@ top_10_trend_line_chart = (
     )
 )
 
-st.altair_chart(top_10_trend_line_chart)
+ranges = pd.DataFrame({
+    'start':[reference_start_year, focus_start_year],
+    'end':[reference_end_year, focus_end_year],
+    'range':['Reference years','Focus years']
+})
 
+shading = (
+        alt.Chart(ranges)
+        .mark_rect(
+            opacity=0.1
+        )
+        .encode(
+            x='start:Q',
+            x2='end:Q',
+            y=alt.value(0),
+            y2=alt.value(250),
+            color=alt.Color(
+                'range',
+                legend=None
+            ),
+            tooltip=alt.value(None)
+        )
+    )
 
+# st.altair_chart(top_10_trend_line_chart)
 
+st.altair_chart(
+    (top_10_trend_line_chart + shading)
+    .resolve_scale(
+        color='independent'    
+    )
+)
 
