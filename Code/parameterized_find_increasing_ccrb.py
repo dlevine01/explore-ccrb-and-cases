@@ -89,6 +89,7 @@ def load_ccrb():
                 .str.strip()
                 # .str.replace(' ','')
                 .apply(pd.to_numeric, errors = 'ignore')
+                .astype(str)
             )
         )
     )
@@ -99,6 +100,7 @@ def load_ccrb():
 
 @st.cache_data(show_spinner='Loading precincts map...')
 def load_precincts():
+
     return (
         alt.Data(
             url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson',
@@ -181,6 +183,7 @@ def load_officers_by_command():
                 .str.strip()
                 # .str.replace(' ','')
                 .apply(pd.to_numeric, errors = 'ignore')
+                .astype(str)
             )
         )
     )
@@ -300,6 +303,7 @@ count_by_year_by_command = (
     ])
     ['Complaint Id']
     .nunique()
+    .rename('count_complaints')
 )
 
 normalized_by_year_by_command = (
@@ -381,17 +385,25 @@ simple_map = (
         stroke='lightgrey'
     )
 ) + (
-    change_by_precinct_filtered_to_more_than_threshold_instances
-    .reset_index()
-    .pipe(alt.Chart)
-    .mark_geoshape()
+    alt.Chart(
+        alt.Data(
+            url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson',
+            format=alt.DataFormat(property='features')
+        )
+    )
+    .transform_calculate(
+        command_normalized = 'toString(datum.properties.Precinct)'
+    )
     .transform_lookup(
         lookup='command_normalized',
         from_=alt.LookupData(
-            data=precincts,
-            key='properties.Precinct',
-            fields=['type','geometry'])
-    ).encode(
+            data=change_by_precinct_filtered_to_more_than_threshold_instances.reset_index(),
+            key='command_normalized',
+            fields=['pct_change']
+        )
+    )
+    .mark_geoshape()
+    .encode(
         color=alt.Color(
             'pct_change:Q',
             title='Pct change',
@@ -417,5 +429,53 @@ simple_map = (
 )
 
 st.altair_chart(simple_map)
+
+
+top_10_precincts = (
+    change_by_precinct_filtered_to_more_than_threshold_instances
+    .head(10)
+    .index
+)
+
+
+top_10_trend_line_chart = (
+    normalized_by_year_by_command
+    .loc[:,top_10_precincts]
+    .reset_index()
+    .where(lambda row: row['command_normalized'] != 'nan').dropna()
+    # .dropna(subset='command_normalized')
+    .pipe(alt.Chart)
+    .mark_line(
+        point='transparent'
+    )
+    .encode(
+        x=alt.X(
+            'incident_year:O',
+            title='Incident year'
+        ),
+        y=alt.Y(
+            'count_complaints:Q',
+            title='Complaints'
+        ),
+        color=alt.Color(
+            'command_normalized:N',
+            title='Precinct/command'
+        ),
+        tooltip=[
+            alt.Tooltip(
+                'command_normalized',
+                title='Precinct/command'
+            ),
+            alt.Tooltip(
+                'count_complaints',
+                title='Complaints'
+            )
+        ]
+    )
+)
+
+st.altair_chart(top_10_trend_line_chart)
+
+
 
 
