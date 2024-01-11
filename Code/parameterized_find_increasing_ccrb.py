@@ -217,7 +217,10 @@ def load_officers_by_command():
 @st.cache_data(show_spinner='Loading crime rates...')
 def load_index_crimes():
     return (
-       pd.read_csv('Data/Processed Data/index_crimes_by_precinct_2023.csv')
+        pd.read_csv(
+            'Data/Processed Data/index_crimes_by_precinct_2023.csv',
+            dtype={'precinct':str}
+        )
         .rename(columns={'precinct':'command_normalized'})
         .set_index('command_normalized')
         ['index_crimes_2023']
