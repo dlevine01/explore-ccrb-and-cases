@@ -508,6 +508,7 @@ st.altair_chart(
     (top_10_trend_line_chart + shading)
     .resolve_scale(
         color='independent'    
-    )
+    ),
+    use_container_width=True
 )
 
