@@ -4,6 +4,10 @@ import geopandas as gpd
 import altair as alt
 import streamlit as st
 
+st.set_page_config(
+    layout='wide'
+)
+
 FADO_TYPES = (
         'Abuse of Authority', 
         'Discourtesy', 
@@ -274,21 +278,21 @@ with ccrb_column:
             label='Reference years (annual mean):',
             min_value=2000,
             max_value=2023,
-            value=(2015,2021)
+            value=(2014,2020)
         )
 
         focus_start_year, focus_end_year = st.slider(
             label='Focus years (annual mean):',
             min_value=2000,
             max_value=2023,
-            value=(2022,2023)
+            value=(2021,2023)
         )
 
         minimum_instances_threshold = st.slider(
             label='Hide precincts/commands without this many complaints in at least one year of either period',
             min_value=0,
             max_value=25,
-            value=2
+            value=3
         )
 
         geographic_precincts_only_selector = st.toggle(
@@ -392,8 +396,8 @@ with ccrb_column:
     )
 
     complaints_title = f"""
-    #### {'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}\n
-    #### Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}\n
+    ###### {'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}\n
+    ###### Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}\n
     {'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}\n
     {'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}
     """
@@ -617,7 +621,7 @@ with cases_column:
         )
 
     complaints_title = f"""
-    #### {case_summary_selected} by precinct
+    ###### {case_summary_selected} by precinct
     {'Showing only cases with settlement payment' if with_settlement_only_selected else ''}\n
     """
 
