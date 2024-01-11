@@ -552,12 +552,126 @@ with_settlement_only_selected = st.toggle(
 
 # case types filter
 
-case_sum_or_median_selected = st.radio(
-    label='summarize cases',
+case_summary_selected = st.radio(
+    label='Summarize cases by:',
     options=(
-        'Grand total',
-        'Median'
+        'Count of cases',
+        'Settlement grand total',
+        'Median settlement'
     ),
     horizontal=True
 )
+
+## summarize cases
+
+if with_settlement_only_selected:
+    cases_subset = (
+        cases
+        [
+            cases['Total City Payout AMT'] > 0
+        ]
+    )
+
+else:
+    cases_subset = cases.copy(deep=True)
+
+
+if case_summary_selected == 'Count of cases':
+
+    cases_summary = (
+        cases_subset
+        .groupby('command_normalized')
+        .size()
+        .sort_values(ascending=False)
+        .rename(case_summary_selected)
+    )
+
+elif case_summary_selected == 'Settlement grand total':
+
+    cases_summary = (
+        cases_subset
+        .groupby('command_normalized')
+        ['Total City Payout AMT']
+        .sum()
+        .sort_values(ascending=False)
+        .rename(case_summary_selected)
+    )
+
+elif case_summary_selected == 'Median settlement':
+
+    cases_summary = (
+        cases_subset
+        .groupby('command_normalized')
+        ['Total City Payout AMT']
+        .median()
+        .sort_values(ascending=False)
+        .rename(case_summary_selected)
+    )
+
+st.dataframe(
+    cases_summary
+    .reset_index()
+    .rename(columns={
+        'command_normalized':'Precinct/command',
+    })
+    .set_index('Precinct/command')
+    .style.format({
+        'Count of cases':'{:,.0f}',
+        'Settlement grand total':'$ {:,.2f}',
+        'Median settlement':'$ {:,.2f}'
+    })
+)
+
+
+cases_map = (
+    alt.Chart(precincts)
+    .mark_geoshape(
+        color='white',
+        stroke='lightgrey'
+    )
+) + (
+    alt.Chart(
+        alt.Data(
+            url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson',
+            format=alt.DataFormat(property='features')
+        )
+    )
+    .transform_calculate(
+        command_normalized = 'toString(datum.properties.Precinct)'
+    )
+    .transform_lookup(
+        lookup='command_normalized',
+        from_=alt.LookupData(
+            data=cases_summary.reset_index(),
+            key='command_normalized',
+            fields=[case_summary_selected]
+        )
+    )
+    .mark_geoshape()
+    .encode(
+        color=alt.Color(
+            f'{case_summary_selected}:Q',
+            title=case_summary_selected,
+            scale=alt.Scale(scheme='purplered'),
+            # legend=alt.Legend(
+            #     format='.0%'
+            # )
+        ),
+        tooltip=[
+            alt.Tooltip(
+                'command_normalized:N',
+                title='Precinct'
+            ),
+            alt.Tooltip(
+                f'{case_summary_selected}:Q',
+                # title='Pct change',
+                # format='.0%'
+            )
+        ]
+    ).project(
+        type='mercator'
+    )
+)
+
+st.altair_chart(cases_map)
 
