@@ -656,12 +656,27 @@ with ccrb_column:
         mime='text/csv'
     )
 
+    # st.dataframe(
+    #         pd.concat([
+    #             pd.DataFrame({'Parameters':complaints_params}),
+    #             (
+    #                 normalized_by_year_by_command
+    #                 .rename_axis(index=['Year','Precinct/command'])
+    #                 .unstack()
+    #             )
+    #         ],axis=1)
+    # )
+
     st.download_button(
         label='Download annual detail',
         data=(
                 pd.concat([
                 pd.DataFrame({'Parameters':complaints_params}),
-                normalized_by_year_by_command.unstack()
+                (
+                    normalized_by_year_by_command
+                    .rename_axis(index=['Year','Precinct/command'])
+                    .unstack()
+                )
             ])
             .to_csv()
         ),
