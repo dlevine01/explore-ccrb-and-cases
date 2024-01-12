@@ -253,13 +253,23 @@ cases = load_cases()
 
 ## options sidebar
 
-with st.sidebar:
+with st.expander(label='Set options',expanded=True):
 
     ## select options
 
-    st.markdown('''
-    ### CCRB complaints options
-    ''')
+    st.write("##### Normalize")
+
+    normalize_by_selected = st.radio(
+        label='Normalize by:',
+        options=(
+            'None',
+            'Currently active officers',
+            'Index crimes'
+        ),
+        horizontal=True
+    )
+
+    st.write("##### CCRB complaints options")
     
     fado_types_selected = st.multiselect(
         label='FADO types:',
@@ -270,15 +280,6 @@ with st.sidebar:
     substantiated_only_selected = st.toggle(
         label='Substantiated complaints only',
         value=False
-    )
-
-    normalize_by_selected = st.radio(
-        label='Normalize by:',
-        options=(
-            'None',
-            'Currently active officers',
-            'Index crimes'
-        )
     )
 
     reference_start_year, reference_end_year = st.slider(
@@ -307,9 +308,7 @@ with st.sidebar:
         value=False
     )
 
-    st.markdown('''
-    ### Cases/litigation options
-    ''')
+    st.write("##### Cases/litigation options")
 
     ## case selection options
 
@@ -331,9 +330,9 @@ with st.sidebar:
     )
 
 
-ccrb_column, cases_column = st.columns(2, gap='large')
+# ccrb_column, cases_column = st.columns(2, gap='large')
 
-with ccrb_column:
+# with ccrb_column:
   
     ## filter and summarize data
 
@@ -708,7 +707,7 @@ with ccrb_column:
     #     mime='text/csv'
     # )
 
-with cases_column:
+# with cases_column:
 
     ## summarize cases
 
