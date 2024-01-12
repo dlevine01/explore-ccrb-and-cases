@@ -249,8 +249,6 @@ active_officers_by_command = (
 index_crimes = load_index_crimes()
 cases = load_cases()
 
-## layout
-
 ## options sidebar
 
 with st.expander(label='Set options',expanded=True):
@@ -548,90 +546,14 @@ cases_title = '\n\n'.join(cases_params)
 
 ## build visuals
 
-# highlight = alt.selection_point(
-#     on='click', 
-#     fields=['command_normalized'], 
-#     # nearest=True,
-#     empty=False
-# )
-
-# complaints_map_base = (
-#     alt.Chart(
-#         precincts
-#     )
-#     .transform_calculate(
-#         command_normalized = 'toString(datum.properties.Precinct)'
-#     )
-#     .transform_lookup(
-#         lookup='command_normalized',
-#         from_=alt.LookupData(
-#             data=change_by_precinct_filtered_to_more_than_threshold_instances.reset_index(),
-#             key='command_normalized',
-#             fields=['pct_change']
-#         )
-#     )
-#     .mark_geoshape()
-#     .encode(
-#         color=alt.Color(
-#             'pct_change:Q',
-#             title='Pct change',
-#             scale=alt.Scale(scheme='purpleorange', domainMid=0),
-#             legend=alt.Legend(
-#                 format='.0%'
-#             )
-#         ),
-#         # stroke=alt.condition(
-#         #     highlight, 
-#         #     alt.value('black'), 
-#         #     alt.value(None)
-#         # ),
-#         # strokeWidth=alt.condition(
-#         #     highlight, 
-#         #     alt.value(3), 
-#         #     alt.value(0.5)
-#         # )
-#     )
-#     .project('mercator')
-#     # .add_params(highlight)
-# )
-
-# complaints_map_fill = (
-#     complaints_map_base
-#     .mark_geoshape()
-#     .encode(
-#         color=alt.Color(
-#             'pct_change:Q',
-#             title='Pct change',
-#             scale=alt.Scale(scheme='purpleorange', domainMid=0),
-#             legend=alt.Legend(
-#                 format='.0%'
-#             )
-#         )
-#     )
-# )
-
-# complaints_map_outline = (
-#     complaints_map_base
-#     # .mark_geoshape(
-#     #     fill=None,
-#     #     opacity=1
-#     # )
-#     .encode(
-#         stroke=alt.condition(
-#             highlight, 
-#             alt.value('black'), 
-#             alt.value(None)
-#         ),
-#         strokeWidth=alt.condition(
-#             highlight, 
-#             alt.value(3), 
-#             alt.value(0.5)
-#         )
-#     )
-# )
-
-# complaints_map = complaints_map_base
-
+highlight = alt.selection_point(
+    on='click', 
+    fields=['command_normalized'], 
+    # nearest=True,
+    empty=False,
+    bind='legend',
+    toggle=False
+)
 
 complaints_map = (
     alt.Chart(precincts)
@@ -664,6 +586,16 @@ complaints_map = (
                 format='.0%'
             )
         ),
+        stroke=alt.condition(
+            highlight, 
+            alt.value('black'), 
+            alt.value(None)
+        ),
+        strokeWidth=alt.condition(
+            highlight, 
+            alt.value(3), 
+            alt.value(0.5)
+        ),
         tooltip=[
             alt.Tooltip(
                 'command_normalized:N',
@@ -677,6 +609,9 @@ complaints_map = (
         ]
     ).project(
         type='mercator'
+    )
+    .add_params(
+        highlight
     )
 )
 
@@ -726,6 +661,11 @@ top_10_trend_line_chart = (
             title='Precinct/command',
             legend=alt.Legend(columns=2)
         ),
+        strokeWidth=alt.condition(
+            highlight, 
+            alt.value(3), 
+            alt.value(0.5)
+        ),
         tooltip=[
             alt.Tooltip(
                 'command_normalized',
@@ -736,6 +676,9 @@ top_10_trend_line_chart = (
                 title='Complaints'
             )
         ]
+    )
+    .add_params(
+        highlight
     )
 )
 
@@ -799,8 +742,13 @@ precincts_rank_chart =(
         tooltip=[
             'command_normalized',
             'rank'
-        ]
-    )
+        ],
+        strokeWidth=alt.condition(
+            highlight, 
+            alt.value(3), 
+            alt.value(0.5)
+        )
+    ).add_params(highlight)
 )
 
 
@@ -835,6 +783,16 @@ cases_map = (
             #     format='.0%'
             # )
         ),
+        stroke=alt.condition(
+            highlight, 
+            alt.value('black'), 
+            alt.value(None)
+        ),
+        strokeWidth=alt.condition(
+            highlight, 
+            alt.value(3), 
+            alt.value(0.5)
+        ),
         tooltip=[
             alt.Tooltip(
                 'command_normalized:N',
@@ -848,8 +806,51 @@ cases_map = (
         ]
     ).project(
         type='mercator'
+    ).add_params(
+        highlight
     )
 )
+
+
+# viz = alt.HConcatChart([
+#     alt.VConcatChart([
+#         complaints_map,
+#         (
+#             (top_10_trend_line_chart + shading + average_trend_chart)
+#             .resolve_scale(
+#                 color='independent'    
+#             )
+#         ),
+#         (
+#             (precincts_rank_chart + shading)
+#             .resolve_scale(
+#                 color='independent'    
+#             )
+#         )
+#     ]),
+#     cases_map
+# ])
+
+viz = (
+    (
+        complaints_map & (
+            (top_10_trend_line_chart + shading + average_trend_chart)
+            .resolve_scale(
+                color='independent'    
+            )
+        ) & (
+           (precincts_rank_chart + shading)
+            .resolve_scale(
+                color='independent'    
+            )
+        )
+    ) | (
+        cases_map
+    ).resolve_scale(
+        color='independent'
+    )
+)
+
 
 
 ## layout and place elements
@@ -867,7 +868,7 @@ with st.container():
     with cases_title_col:
         st.write(cases_title)
 
-# tables and data
+# tables
 with st.container():
     
     ccrb_table_col, cases_table_col = st.columns(2, gap='small')
@@ -880,24 +881,6 @@ with st.container():
                 'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
                 'Pct change':'{:.0%}'
             })
-        )
-
-        st.altair_chart(complaints_map)
-
-        st.altair_chart(
-            (top_10_trend_line_chart + shading + average_trend_chart)
-            .resolve_scale(
-                color='independent'    
-            ),
-            use_container_width=True
-        )
-        
-        st.altair_chart(
-            (precincts_rank_chart + shading)
-            .resolve_scale(
-                color='independent'    
-            ),
-            use_container_width=True
         )
 
     with cases_table_col:
@@ -915,7 +898,13 @@ with st.container():
             })
         )
 
-        st.altair_chart(cases_map)
+# jumbo altair linked viz
+with st.container():
+
+        st.altair_chart(
+            viz, 
+            use_container_width=True
+        )
 
 # download buttons
 with st.container():
