@@ -530,7 +530,7 @@ with ccrb_column:
         .reset_index()
         .where(lambda row: row['command_normalized'] != 'nan').dropna()
         # .dropna(subset='command_normalized')
-        .pipe(alt.Chart)
+        .pipe(alt.Chart, title='Annual measure')
         .mark_line(
             point='transparent'
         )
@@ -592,6 +592,75 @@ with ccrb_column:
 
     st.altair_chart(
         (top_10_trend_line_chart + shading)
+        .resolve_scale(
+            color='independent'    
+        ),
+        use_container_width=True
+    )
+
+    precincts_ranks = (
+        normalized_by_year_by_command
+        .unstack()
+        .drop(columns='nan')
+        .rank(
+            axis=1,
+            method='min',
+            ascending=False
+        )
+        .stack()
+        .rename('rank')
+    )
+
+    # st.dataframe(
+    #     precincts_ranks
+    #     .reset_index()
+    # )
+
+    precincts_rank_chart =(
+        precincts_ranks
+        .loc[reference_start_year:focus_end_year,top_10_precincts]
+        .reset_index()
+        .pipe(alt.Chart, title='Annual rank')
+        .mark_line(
+            point=True
+        )
+        .encode(
+            x=alt.X(
+                'incident_year:Q',
+                title='Incident year',
+                axis=alt.Axis(
+                    format='.0f',
+                    tickMinStep=1
+                ),
+                # scale=alt.Scale(
+                #     zero=False
+                # )
+                # scale=alt.Scale(
+                #     domain=[2014,2022]
+                # )
+                # scale=alt.Scale(
+                #     domainMin=2005
+                # )
+            ),
+            y=alt.Y(
+                'rank',
+                # scale=alt.Scale(
+                #     domain=[0,10]
+                # )
+                scale=alt.Scale(
+                    reverse=True
+                ),
+            ),
+            color='command_normalized',
+            tooltip=[
+                'command_normalized',
+                'rank'
+            ]
+        )
+    )
+
+    st.altair_chart(
+        (precincts_rank_chart + shading)
         .resolve_scale(
             color='independent'    
         ),
