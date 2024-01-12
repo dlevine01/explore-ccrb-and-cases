@@ -4,8 +4,8 @@ import geopandas as gpd
 import altair as alt
 import streamlit as st
 
-# import io
-# import xlsxwriter
+from io import BytesIO
+import xlsxwriter
 
 st.set_page_config(
     layout='wide'
@@ -375,23 +375,11 @@ with ccrb_column:
         .rename('count_complaints')
     )
 
-    # st.dataframe(count_by_year_by_command)
-
-    # st.dataframe(normalizer)
-
-    # st.write(normalizer.index.dtypes)
-
-    # st.dataframe(
-    #     count_by_year_by_command
-    #     .div(normalizer)
-    # )
 
     normalized_by_year_by_command = (
         count_by_year_by_command
         .div(normalizer)
     )
-
-    # st.dataframe(normalized_by_year_by_command)
 
     change_by_precinct = (
         (
@@ -442,16 +430,7 @@ with ccrb_column:
         ]
     )
 
-    complaints_title = f"""
-    ###### {'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}\n
-    ###### Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}\n
-    {'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}\n
-    {'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}
-    """
-
-    st.markdown(complaints_title)
-
-    st.dataframe(
+    change_by_precinct_filtered__labeled = (
         change_by_precinct_filtered_to_more_than_threshold_instances
         .reset_index()
         .rename(columns={
@@ -461,6 +440,27 @@ with ccrb_column:
             'pct_change':'Pct change'
         })
         .set_index('Precinct/command')
+    )
+
+    complaints_params = (
+        f"{'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
+        f"Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}",
+        f"{'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}",
+        f"{'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}" 
+    )
+
+    complaints_title = f"""
+    ###### {complaints_params[0]}
+    ###### {complaints_params[1]}
+    {complaints_params[2]}\n
+    {complaints_params[3]}\n
+    """
+
+    st.markdown(complaints_title)
+
+
+    st.dataframe(
+        change_by_precinct_filtered__labeled
         .style.format({
             'Reference years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
             'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
@@ -598,7 +598,76 @@ with ccrb_column:
         use_container_width=True
     )
 
-    # complaints_excel = 
+    # output = BytesIO()
+    # # workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+
+    # with pd.ExcelWriter(path=output, mode='w') as writer:
+
+    #     # parameters_sheet = workbook.add_worksheet(name='parameters')
+    #     # parameters_sheet.write('A1', complaints_title)
+
+    #     (
+    #         change_by_precinct_filtered__labeled
+    #         .to_excel(
+    #             writer,
+    #             sheet_name='pct_change'
+    #         )
+    #     )
+
+    #     (
+    #         normalized_by_year_by_command
+    #         .unstack()
+    #         .to_excel(
+    #             writer,
+    #             sheet_name='by_precinct_by_year'
+    #         )
+    #     )
+
+
+    #     st.download_button(
+    #         label="Download Excel workbook",
+    #         data=output.getvalue(),
+    #         file_name="workbook.xlsx",
+    #         mime="application/vnd.ms-excel"
+    #     )
+
+
+
+
+    # st.write('\n\n'.join(complaints_params))
+
+    # st.dataframe(
+    #     pd.concat([
+    #         pd.DataFrame({'params':complaints_params}),
+    #         change_by_precinct_filtered__labeled.reset_index()
+    #     ])
+    # )
+
+    st.download_button(
+        label='Download pct change',
+        data=(
+                pd.concat([
+                pd.DataFrame({'Parameters':complaints_params}),
+                change_by_precinct_filtered__labeled.reset_index()
+            ])
+            .to_csv(index=False)
+        ),
+        file_name='complaints_pct_change.csv',
+        mime='text/csv'
+    )
+
+    st.download_button(
+        label='Download annual detail',
+        data=(
+                pd.concat([
+                pd.DataFrame({'Parameters':complaints_params}),
+                normalized_by_year_by_command.unstack()
+            ])
+            .to_csv()
+        ),
+        file_name='complaints_by_precinct_by_year.csv',
+        mime='text/csv'
+    )
 
 with cases_column:
 
