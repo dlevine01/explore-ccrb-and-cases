@@ -382,11 +382,6 @@ with ccrb_column:
         .rename('count_complaints')
     )
 
-    st.dataframe(
-        normalized_by_year_by_command
-        .reset_index()
-        )
-
     change_by_precinct = (
         (
             normalized_by_year_by_command
@@ -458,17 +453,17 @@ with ccrb_column:
 
     complaints_title = '\n\n'.join(complaints_params)
 
-    st.markdown(complaints_title)
+    # st.markdown(complaints_title)
 
 
-    st.dataframe(
-        change_by_precinct_filtered__labeled
-        .style.format({
-            'Reference years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
-            'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
-            'Pct change':'{:.0%}'
-        })
-    )
+    # st.dataframe(
+    #     change_by_precinct_filtered__labeled
+    #     .style.format({
+    #         'Reference years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+    #         'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+    #         'Pct change':'{:.0%}'
+    #     })
+    # )
 
     complaints_map = (
         alt.Chart(precincts)
@@ -517,14 +512,13 @@ with ccrb_column:
         )
     )
 
-    st.altair_chart(complaints_map)
+    # st.altair_chart(complaints_map)
 
     top_10_precincts = (
         change_by_precinct_filtered_to_more_than_threshold_instances
         .head(10)
         .index
     )
-
 
     top_10_trend_line_chart = (
         normalized_by_year_by_command
@@ -590,15 +584,13 @@ with ccrb_column:
             )
         )
 
-    # st.altair_chart(top_10_trend_line_chart)
-
-    st.altair_chart(
-        (top_10_trend_line_chart + shading)
-        .resolve_scale(
-            color='independent'    
-        ),
-        use_container_width=True
-    )
+    # st.altair_chart(
+    #     (top_10_trend_line_chart + shading)
+    #     .resolve_scale(
+    #         color='independent'    
+    #     ),
+    #     use_container_width=True
+    # )
 
     precincts_ranks = (
         normalized_by_year_by_command
@@ -612,11 +604,6 @@ with ccrb_column:
         .stack()
         .rename('rank')
     )
-
-    # st.dataframe(
-    #     precincts_ranks
-    #     .reset_index()
-    # )
 
     precincts_rank_chart =(
         precincts_ranks
@@ -649,13 +636,13 @@ with ccrb_column:
         )
     )
 
-    st.altair_chart(
-        (precincts_rank_chart + shading)
-        .resolve_scale(
-            color='independent'    
-        ),
-        use_container_width=True
-    )
+    # st.altair_chart(
+    #     (precincts_rank_chart + shading)
+    #     .resolve_scale(
+    #         color='independent'    
+    #     ),
+    #     use_container_width=True
+    # )
 
     # output = BytesIO()
     # # workbook = xlsxwriter.Workbook(output, {'in_memory': True})
@@ -691,57 +678,35 @@ with ccrb_column:
     #     )
 
 
-
-
-    # st.write('\n\n'.join(complaints_params))
-
-    # st.dataframe(
-    #     pd.concat([
-    #         pd.DataFrame({'params':complaints_params}),
-    #         change_by_precinct_filtered__labeled.reset_index()
-    #     ])
+    # st.download_button(
+    #     label='Download pct change',
+    #     data=(
+    #             pd.concat([
+    #             pd.DataFrame({'Parameters':complaints_params}),
+    #             change_by_precinct_filtered__labeled.reset_index()
+    #         ])
+    #         .to_csv(index=False)
+    #     ),
+    #     file_name='complaints_pct_change.csv',
+    #     mime='text/csv'
     # )
 
-    st.download_button(
-        label='Download pct change',
-        data=(
-                pd.concat([
-                pd.DataFrame({'Parameters':complaints_params}),
-                change_by_precinct_filtered__labeled.reset_index()
-            ])
-            .to_csv(index=False)
-        ),
-        file_name='complaints_pct_change.csv',
-        mime='text/csv'
-    )
-
-    # st.dataframe(
-    #         pd.concat([
+    # st.download_button(
+    #     label='Download annual detail',
+    #     data=(
+    #             pd.concat([
     #             pd.DataFrame({'Parameters':complaints_params}),
     #             (
     #                 normalized_by_year_by_command
     #                 .rename_axis(index=['Year','Precinct/command'])
     #                 .unstack()
     #             )
-    #         ],axis=1)
+    #         ])
+    #         .to_csv()
+    #     ),
+    #     file_name='complaints_by_precinct_by_year.csv',
+    #     mime='text/csv'
     # )
-
-    st.download_button(
-        label='Download annual detail',
-        data=(
-                pd.concat([
-                pd.DataFrame({'Parameters':complaints_params}),
-                (
-                    normalized_by_year_by_command
-                    .rename_axis(index=['Year','Precinct/command'])
-                    .unstack()
-                )
-            ])
-            .to_csv()
-        ),
-        file_name='complaints_by_precinct_by_year.csv',
-        mime='text/csv'
-    )
 
 with cases_column:
 
@@ -793,13 +758,6 @@ with cases_column:
             .rename(case_summary_selected)
         )
 
-    st.dataframe(cases_summary)
-
-    # normalized_by_year_by_command = (
-    #     count_by_year_by_command
-    #     .div(normalizer)
-    # )
-
     cases_params = (
         f"{case_summary_selected} by precinct",
         f"{'per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
@@ -808,21 +766,21 @@ with cases_column:
 
     cases_title = '\n\n'.join(cases_params)
 
-    st.markdown(cases_title)
+    # st.markdown(cases_title)
 
-    st.dataframe(
-        cases_summary
-        .reset_index()
-        .rename(columns={
-            'command_normalized':'Precinct/command',
-        })
-        .set_index('Precinct/command')
-        .style.format({
-            'Count of cases':'{:,.0f}',
-            'Settlement grand total':'$ {:,.2f}',
-            'Median settlement':'$ {:,.2f}'
-        })
-    )
+    # st.dataframe(
+    #     cases_summary
+    #     .reset_index()
+    #     .rename(columns={
+    #         'command_normalized':'Precinct/command',
+    #     })
+    #     .set_index('Precinct/command')
+    #     .style.format({
+    #         'Count of cases':'{:,.0f}',
+    #         'Settlement grand total':'$ {:,.2f}',
+    #         'Median settlement':'$ {:,.2f}'
+    #     })
+    # )
 
     cases_map = (
         alt.Chart(precincts)
@@ -871,5 +829,102 @@ with cases_column:
         )
     )
 
-    st.altair_chart(cases_map)
 
+
+# titles/params
+with st.container():
+    
+    ccrb_title_col, cases_title_col = st.columns(2, gap='small')
+
+    with ccrb_title_col:
+        st.write(complaints_title)
+    
+    with cases_title_col:
+        st.write(cases_title)
+
+# tables and data
+with st.container():
+    
+    ccrb_table_col, cases_table_col = st.columns(2, gap='small')
+
+    with ccrb_table_col:
+        st.dataframe(
+            change_by_precinct_filtered__labeled
+            .style.format({
+                'Reference years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+                'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+                'Pct change':'{:.0%}'
+            })
+        )
+
+        st.altair_chart(complaints_map)
+
+        st.altair_chart(
+            (top_10_trend_line_chart + shading)
+            .resolve_scale(
+                color='independent'    
+            ),
+            use_container_width=True
+        )
+        
+        st.altair_chart(
+            (precincts_rank_chart + shading)
+            .resolve_scale(
+                color='independent'    
+            ),
+            use_container_width=True
+        )
+
+    with cases_table_col:
+        st.dataframe(
+            cases_summary
+            .reset_index()
+            .rename(columns={
+                'command_normalized':'Precinct/command',
+            })
+            .set_index('Precinct/command')
+            .style.format({
+                'Count of cases':'{:,.0f}',
+                'Settlement grand total':'$ {:,.2f}',
+                'Median settlement':'$ {:,.2f}'
+            })
+        )
+
+        st.altair_chart(cases_map)
+
+# download buttons
+with st.container():
+    
+    ccrb_download_col, cases_download_col = st.columns(2,gap='small')
+
+    with ccrb_download_col:
+
+        st.download_button(
+            label='Download pct change',
+            data=(
+                    pd.concat([
+                    pd.DataFrame({'Parameters':complaints_params}),
+                    change_by_precinct_filtered__labeled.reset_index()
+                ])
+                .to_csv(index=False)
+            ),
+            file_name='complaints_pct_change.csv',
+            mime='text/csv'
+        )
+
+        st.download_button(
+            label='Download annual detail',
+            data=(
+                    pd.concat([
+                    pd.DataFrame({'Parameters':complaints_params}),
+                    (
+                        normalized_by_year_by_command
+                        .rename_axis(index=['Year','Precinct/command'])
+                        .unstack()
+                    )
+                ])
+                .to_csv()
+            ),
+            file_name='complaints_by_precinct_by_year.csv',
+            mime='text/csv'
+        )
