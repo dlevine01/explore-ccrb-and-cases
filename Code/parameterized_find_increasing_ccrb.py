@@ -4,8 +4,8 @@ import geopandas as gpd
 import altair as alt
 import streamlit as st
 
-from io import BytesIO
-import xlsxwriter
+# from io import BytesIO
+# import xlsxwriter
 
 st.set_page_config(
     layout='wide'
@@ -378,6 +378,21 @@ normalized_by_year_by_command = (
     .rename('count_complaints')
 )
 
+average_complaints = (
+    normalized_by_year_by_command
+    .unstack()
+    .mean(
+        axis=1, 
+        skipna=True
+    )
+    .rename('count_complaints')
+)
+
+median_complaints = (
+    normalized_by_year_by_command
+    .median(axis=0, skipna=True)
+)
+
 change_by_precinct = (
     (
         normalized_by_year_by_command
@@ -533,6 +548,91 @@ cases_title = '\n\n'.join(cases_params)
 
 ## build visuals
 
+# highlight = alt.selection_point(
+#     on='click', 
+#     fields=['command_normalized'], 
+#     # nearest=True,
+#     empty=False
+# )
+
+# complaints_map_base = (
+#     alt.Chart(
+#         precincts
+#     )
+#     .transform_calculate(
+#         command_normalized = 'toString(datum.properties.Precinct)'
+#     )
+#     .transform_lookup(
+#         lookup='command_normalized',
+#         from_=alt.LookupData(
+#             data=change_by_precinct_filtered_to_more_than_threshold_instances.reset_index(),
+#             key='command_normalized',
+#             fields=['pct_change']
+#         )
+#     )
+#     .mark_geoshape()
+#     .encode(
+#         color=alt.Color(
+#             'pct_change:Q',
+#             title='Pct change',
+#             scale=alt.Scale(scheme='purpleorange', domainMid=0),
+#             legend=alt.Legend(
+#                 format='.0%'
+#             )
+#         ),
+#         # stroke=alt.condition(
+#         #     highlight, 
+#         #     alt.value('black'), 
+#         #     alt.value(None)
+#         # ),
+#         # strokeWidth=alt.condition(
+#         #     highlight, 
+#         #     alt.value(3), 
+#         #     alt.value(0.5)
+#         # )
+#     )
+#     .project('mercator')
+#     # .add_params(highlight)
+# )
+
+# complaints_map_fill = (
+#     complaints_map_base
+#     .mark_geoshape()
+#     .encode(
+#         color=alt.Color(
+#             'pct_change:Q',
+#             title='Pct change',
+#             scale=alt.Scale(scheme='purpleorange', domainMid=0),
+#             legend=alt.Legend(
+#                 format='.0%'
+#             )
+#         )
+#     )
+# )
+
+# complaints_map_outline = (
+#     complaints_map_base
+#     # .mark_geoshape(
+#     #     fill=None,
+#     #     opacity=1
+#     # )
+#     .encode(
+#         stroke=alt.condition(
+#             highlight, 
+#             alt.value('black'), 
+#             alt.value(None)
+#         ),
+#         strokeWidth=alt.condition(
+#             highlight, 
+#             alt.value(3), 
+#             alt.value(0.5)
+#         )
+#     )
+# )
+
+# complaints_map = complaints_map_base
+
+
 complaints_map = (
     alt.Chart(precincts)
     .mark_geoshape(
@@ -581,52 +681,20 @@ complaints_map = (
 )
 
 shading = (
-        alt.Chart(ranges)
-        .mark_rect(
-            opacity=0.1
-        )
-        .encode(
-            x='start:Q',
-            x2='end:Q',
-            y=alt.value(0),
-            y2=alt.value(250),
-            color=alt.Color(
-                'range',
-                # legend=None
-            ),
-            tooltip=alt.value(None)
-        )
-    )
-
-
-precincts_rank_chart =(
-    precincts_ranks
-    .loc[reference_start_year:focus_end_year,top_10_precincts]
-    .reset_index()
-    .pipe(alt.Chart, title='Annual rank')
-    .mark_line(
-        point=True
+    alt.Chart(ranges)
+    .mark_rect(
+        opacity=0.1
     )
     .encode(
-        x=alt.X(
-            'incident_year:Q',
-            title='Incident year',
-            axis=alt.Axis(
-                format='.0f',
-                tickMinStep=1
-            ),
+        x='start:Q',
+        x2='end:Q',
+        y=alt.value(0),
+        y2=alt.value(250),
+        color=alt.Color(
+            'range',
+            # legend=None
         ),
-        y=alt.Y(
-            'rank',
-            scale=alt.Scale(
-                reverse=True
-            ),
-        ),
-        color='command_normalized',
-        tooltip=[
-            'command_normalized',
-            'rank'
-        ]
+        tooltip=alt.value(None)
     )
 )
 
@@ -655,7 +723,8 @@ top_10_trend_line_chart = (
         ),
         color=alt.Color(
             'command_normalized:N',
-            title='Precinct/command'
+            title='Precinct/command',
+            legend=alt.Legend(columns=2)
         ),
         tooltip=[
             alt.Tooltip(
@@ -666,6 +735,67 @@ top_10_trend_line_chart = (
                 'count_complaints',
                 title='Complaints'
             )
+        ]
+    )
+)
+
+average_trend_chart = (
+    average_complaints
+    .loc[reference_start_year:focus_end_year]
+    .reset_index()
+    .assign(
+        Average = 'Average'
+    )
+    .pipe(alt.Chart)
+    .mark_line(
+        strokeWidth=4,
+        color='grey',
+        strokeDash=(4,3)
+    )
+    .encode(
+        x=alt.X(
+            'incident_year:Q',
+            title='Incident year',
+            axis=alt.Axis(
+                format='.0f',
+                tickMinStep=1
+            )
+        ),
+        y=alt.Y(
+            'count_complaints:Q',
+            title='Complaints'
+        ),
+        color='Average'
+    )
+)
+
+precincts_rank_chart =(
+    precincts_ranks
+    .loc[reference_start_year:focus_end_year,top_10_precincts]
+    .reset_index()
+    .pipe(alt.Chart, title='Annual rank')
+    .mark_line(
+        point=True
+    )
+    .encode(
+        x=alt.X(
+            'incident_year:Q',
+            title='Incident year',
+            axis=alt.Axis(
+                format='.0f',
+                tickMinStep=1
+            ),
+        ),
+        y=alt.Y(
+            'rank',
+            scale=alt.Scale(
+                reverse=True
+            ),
+        ),
+        color='command_normalized',
+        tooltip=[
+            'command_normalized',
+            'rank'
         ]
     )
 )
@@ -752,7 +882,7 @@ with st.container():
         st.altair_chart(complaints_map)
 
         st.altair_chart(
-            (top_10_trend_line_chart + shading)
+            (top_10_trend_line_chart + shading + average_trend_chart)
             .resolve_scale(
                 color='independent'    
             ),
