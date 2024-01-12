@@ -379,7 +379,13 @@ with ccrb_column:
     normalized_by_year_by_command = (
         count_by_year_by_command
         .div(normalizer)
+        .rename('count_complaints')
     )
+
+    st.dataframe(
+        normalized_by_year_by_command
+        .reset_index()
+        )
 
     change_by_precinct = (
         (
@@ -443,18 +449,14 @@ with ccrb_column:
     )
 
     complaints_params = (
-        f"{'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s) {', '.join(fado_types_selected)} {', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
+        f"{'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s): {', '.join(fado_types_selected)}",
+        f"{'per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
         f"Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}",
         f"{'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}",
         f"{'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}" 
     )
 
-    complaints_title = f"""
-    ###### {complaints_params[0]}
-    ###### {complaints_params[1]}
-    {complaints_params[2]}\n
-    {complaints_params[3]}\n
-    """
+    complaints_title = '\n\n'.join(complaints_params)
 
     st.markdown(complaints_title)
 
@@ -632,21 +634,9 @@ with ccrb_column:
                     format='.0f',
                     tickMinStep=1
                 ),
-                # scale=alt.Scale(
-                #     zero=False
-                # )
-                # scale=alt.Scale(
-                #     domain=[2014,2022]
-                # )
-                # scale=alt.Scale(
-                #     domainMin=2005
-                # )
             ),
             y=alt.Y(
                 'rank',
-                # scale=alt.Scale(
-                #     domain=[0,10]
-                # )
                 scale=alt.Scale(
                     reverse=True
                 ),
@@ -775,6 +765,7 @@ with cases_column:
             cases_subset
             .groupby('command_normalized')
             .size()
+            .div(normalizer)
             .sort_values(ascending=False)
             .rename(case_summary_selected)
         )
@@ -786,6 +777,7 @@ with cases_column:
             .groupby('command_normalized')
             ['Total City Payout AMT']
             .sum()
+            .div(normalizer)
             .sort_values(ascending=False)
             .rename(case_summary_selected)
         )
@@ -801,12 +793,22 @@ with cases_column:
             .rename(case_summary_selected)
         )
 
-    complaints_title = f"""
-    ###### {case_summary_selected} by precinct
-    {'Showing only cases with settlement payment' if with_settlement_only_selected else ''}\n
-    """
+    st.dataframe(cases_summary)
 
-    st.markdown(complaints_title)
+    # normalized_by_year_by_command = (
+    #     count_by_year_by_command
+    #     .div(normalizer)
+    # )
+
+    cases_params = (
+        f"{case_summary_selected} by precinct",
+        f"{'per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
+        f"{'Showing only cases with settlement payment' if with_settlement_only_selected else ''}"
+    )
+
+    cases_title = '\n\n'.join(cases_params)
+
+    st.markdown(cases_title)
 
     st.dataframe(
         cases_summary
