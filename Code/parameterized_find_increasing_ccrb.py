@@ -4,6 +4,9 @@ import geopandas as gpd
 import altair as alt
 import streamlit as st
 
+# import io
+# import xlsxwriter
+
 st.set_page_config(
     layout='wide'
 )
@@ -372,23 +375,23 @@ with ccrb_column:
         .rename('count_complaints')
     )
 
-    st.dataframe(count_by_year_by_command)
+    # st.dataframe(count_by_year_by_command)
 
-    st.dataframe(normalizer)
+    # st.dataframe(normalizer)
 
-    st.write(normalizer.index.dtypes)
+    # st.write(normalizer.index.dtypes)
 
-    st.dataframe(
-        count_by_year_by_command
-        .div(normalizer)
-    )
+    # st.dataframe(
+    #     count_by_year_by_command
+    #     .div(normalizer)
+    # )
 
     normalized_by_year_by_command = (
         count_by_year_by_command
         .div(normalizer)
     )
 
-    st.dataframe(normalized_by_year_by_command)
+    # st.dataframe(normalized_by_year_by_command)
 
     change_by_precinct = (
         (
@@ -594,6 +597,8 @@ with ccrb_column:
         ),
         use_container_width=True
     )
+
+    # complaints_excel = 
 
 with cases_column:
 
