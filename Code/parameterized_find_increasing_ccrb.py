@@ -330,503 +330,396 @@ with st.expander(label='Set options',expanded=True):
     )
 
 
-# ccrb_column, cases_column = st.columns(2, gap='large')
 
-# with ccrb_column:
-  
-    ## filter and summarize data
+## filter and summarize data
 
-    fado_type_filter = (
-        ccrb_allegations
-        ['FADO Type']
-        .isin(fado_types_selected)
+fado_type_filter = (
+    ccrb_allegations
+    ['FADO Type']
+    .isin(fado_types_selected)
+)
+
+substantiated_filter = (
+    ccrb_allegations['CCRB disposition substantiated'] 
+    if substantiated_only_selected 
+    else 
+    [True] * len(ccrb_allegations)
+)
+
+normalizer = (
+    active_officers_by_command if normalize_by_selected == 'Currently active officers' 
+    else index_crimes if normalize_by_selected == 'Index crimes'
+    else 1
+)
+
+count_by_year_by_command = (
+    ccrb_allegations
+    [
+        fado_type_filter
+        &
+        substantiated_filter
+    ]
+    .assign(
+        incident_year = lambda row: row['Incident Date'].dt.year
     )
+    .groupby([
+        'incident_year',
+        'command_normalized'
+    ])
+    ['Complaint Id']
+    .nunique()
+    .rename('count_complaints')
+)
 
-    substantiated_filter = (
-        ccrb_allegations['CCRB disposition substantiated'] 
-        if substantiated_only_selected 
-        else 
-        [True] * len(ccrb_allegations)
+
+normalized_by_year_by_command = (
+    count_by_year_by_command
+    .div(normalizer)
+    .rename('count_complaints')
+)
+
+change_by_precinct = (
+    (
+        normalized_by_year_by_command
+        .loc[reference_start_year:reference_end_year]
+        .groupby('command_normalized')
+        .mean()
+        .rename('reference_years')
+        .to_frame()
+    ).join(
+        normalized_by_year_by_command
+        .loc[focus_start_year:focus_end_year]
+        .groupby('command_normalized')
+        .mean()
+        .rename('focus_years')
     )
-
-    normalizer = (
-        active_officers_by_command if normalize_by_selected == 'Currently active officers' 
-        else index_crimes if normalize_by_selected == 'Index crimes'
-        else 1
+    .fillna(0)
+    .assign(
+        pct_change = lambda row: row.pct_change(axis=1)['focus_years'],
     )
+    .dropna(subset='pct_change')
+    .sort_values('pct_change',ascending=False)
+)
 
-    count_by_year_by_command = (
-        ccrb_allegations
-        [
-            fado_type_filter
-            &
-            substantiated_filter
-        ]
-        .assign(
-            incident_year = lambda row: row['Incident Date'].dt.year
-        )
-        .groupby([
-            'incident_year',
-            'command_normalized'
-        ])
-        ['Complaint Id']
-        .nunique()
-        .rename('count_complaints')
-    )
-
-
-    normalized_by_year_by_command = (
-        count_by_year_by_command
-        .div(normalizer)
-        .rename('count_complaints')
-    )
-
+if geographic_precincts_only_selector:
     change_by_precinct = (
-        (
-            normalized_by_year_by_command
-            .loc[reference_start_year:reference_end_year]
-            .groupby('command_normalized')
-            .mean()
-            .rename('reference_years')
-            .to_frame()
-        ).join(
-            normalized_by_year_by_command
-            .loc[focus_start_year:focus_end_year]
-            .groupby('command_normalized')
-            .mean()
-            .rename('focus_years')
-        )
-        .fillna(0)
-        .assign(
-            pct_change = lambda row: row.pct_change(axis=1)['focus_years'],
-        )
-        .dropna(subset='pct_change')
+        change_by_precinct
+        .loc[PRECINCTS]
         .sort_values('pct_change',ascending=False)
     )
 
-    if geographic_precincts_only_selector:
-        change_by_precinct = (
-            change_by_precinct
-            .loc[PRECINCTS]
-            .sort_values('pct_change',ascending=False)
+change_by_precinct_filtered_to_more_than_threshold_instances = (
+    change_by_precinct
+    [
+        (
+            count_by_year_by_command
+            .loc[reference_start_year:reference_end_year]
+            .groupby('command_normalized')
+            .max()
+            .ge(minimum_instances_threshold)
+        ) & (
+            count_by_year_by_command
+            .loc[focus_start_year:focus_end_year]
+            .groupby('command_normalized')
+            .max()
+            .ge(minimum_instances_threshold)
         )
+    ]
+)
 
-    change_by_precinct_filtered_to_more_than_threshold_instances = (
-        change_by_precinct
+change_by_precinct_filtered__labeled = (
+    change_by_precinct_filtered_to_more_than_threshold_instances
+    .reset_index()
+    .rename(columns={
+        'command_normalized':'Precinct/command',
+        'reference_years':'Reference years (annual mean)',
+        'focus_years':'Focus years (annual mean)',
+        'pct_change':'Pct change'
+    })
+    .set_index('Precinct/command')
+)
+
+top_10_precincts = (
+    change_by_precinct_filtered_to_more_than_threshold_instances
+    .head(10)
+    .index
+)
+
+precincts_ranks = (
+    normalized_by_year_by_command
+    .unstack()
+    .drop(columns='nan')
+    .rank(
+        axis=1,
+        method='min',
+        ascending=False
+    )
+    .stack()
+    .rename('rank')
+)
+
+complaints_params = (
+    f"{'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s): {', '.join(fado_types_selected)}",
+    f"{'per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
+    f"Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}",
+    f"{'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}",
+    f"{'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}" 
+)
+
+complaints_title = '\n\n'.join(complaints_params)
+
+ranges = pd.DataFrame({
+    'start':[reference_start_year, focus_start_year],
+    'end':[reference_end_year, focus_end_year],
+    'range':['Reference years','Focus years']
+})
+
+## summarize cases
+
+if with_settlement_only_selected:
+    cases_subset = (
+        cases
         [
-            (
-                count_by_year_by_command
-                .loc[reference_start_year:reference_end_year]
-                .groupby('command_normalized')
-                .max()
-                .ge(minimum_instances_threshold)
-            ) & (
-                count_by_year_by_command
-                .loc[focus_start_year:focus_end_year]
-                .groupby('command_normalized')
-                .max()
-                .ge(minimum_instances_threshold)
-            )
+            cases['Total City Payout AMT'] > 0
         ]
     )
 
-    change_by_precinct_filtered__labeled = (
-        change_by_precinct_filtered_to_more_than_threshold_instances
-        .reset_index()
-        .rename(columns={
-            'command_normalized':'Precinct/command',
-            'reference_years':'Reference years (annual mean)',
-            'focus_years':'Focus years (annual mean)',
-            'pct_change':'Pct change'
-        })
-        .set_index('Precinct/command')
+else:
+    cases_subset = cases.copy(deep=True)
+
+
+if case_summary_selected == 'Count of cases':
+
+    cases_summary = (
+        cases_subset
+        .groupby('command_normalized')
+        .size()
+        .div(normalizer)
+        .sort_values(ascending=False)
+        .rename(case_summary_selected)
     )
 
-    complaints_params = (
-        f"{'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s): {', '.join(fado_types_selected)}",
-        f"{'per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
-        f"Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}",
-        f"{'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}",
-        f"{'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}" 
+elif case_summary_selected == 'Settlement grand total':
+
+    cases_summary = (
+        cases_subset
+        .groupby('command_normalized')
+        ['Total City Payout AMT']
+        .sum()
+        .div(normalizer)
+        .sort_values(ascending=False)
+        .rename(case_summary_selected)
     )
 
-    complaints_title = '\n\n'.join(complaints_params)
+elif case_summary_selected == 'Median settlement':
 
-    # st.markdown(complaints_title)
+    cases_summary = (
+        cases_subset
+        .groupby('command_normalized')
+        ['Total City Payout AMT']
+        .median()
+        .sort_values(ascending=False)
+        .rename(case_summary_selected)
+    )
+
+cases_params = (
+    f"{case_summary_selected} by precinct",
+    f"{'per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
+    f"{'Showing only cases with settlement payment' if with_settlement_only_selected else ''}"
+)
+
+cases_title = '\n\n'.join(cases_params)
 
 
-    # st.dataframe(
-    #     change_by_precinct_filtered__labeled
-    #     .style.format({
-    #         'Reference years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
-    #         'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
-    #         'Pct change':'{:.0%}'
-    #     })
-    # )
+## build visuals
 
-    complaints_map = (
-        alt.Chart(precincts)
-        .mark_geoshape(
-            color='white',
-            stroke='lightgrey'
+complaints_map = (
+    alt.Chart(precincts)
+    .mark_geoshape(
+        color='white',
+        stroke='lightgrey'
+    )
+) + (
+    alt.Chart(
+        precincts
+    )
+    .transform_calculate(
+        command_normalized = 'toString(datum.properties.Precinct)'
+    )
+    .transform_lookup(
+        lookup='command_normalized',
+        from_=alt.LookupData(
+            data=change_by_precinct_filtered_to_more_than_threshold_instances.reset_index(),
+            key='command_normalized',
+            fields=['pct_change']
         )
-    ) + (
-        alt.Chart(
-            precincts
-        )
-        .transform_calculate(
-            command_normalized = 'toString(datum.properties.Precinct)'
-        )
-        .transform_lookup(
-            lookup='command_normalized',
-            from_=alt.LookupData(
-                data=change_by_precinct_filtered_to_more_than_threshold_instances.reset_index(),
-                key='command_normalized',
-                fields=['pct_change']
+    )
+    .mark_geoshape()
+    .encode(
+        color=alt.Color(
+            'pct_change:Q',
+            title='Pct change',
+            scale=alt.Scale(scheme='purpleorange', domainMid=0),
+            legend=alt.Legend(
+                format='.0%'
             )
-        )
-        .mark_geoshape()
-        .encode(
-            color=alt.Color(
+        ),
+        tooltip=[
+            alt.Tooltip(
+                'command_normalized:N',
+                title='Precinct'
+            ),
+            alt.Tooltip(
                 'pct_change:Q',
                 title='Pct change',
-                scale=alt.Scale(scheme='purpleorange', domainMid=0),
-                legend=alt.Legend(
-                    format='.0%'
-                )
-            ),
-            tooltip=[
-                alt.Tooltip(
-                    'command_normalized:N',
-                    title='Precinct'
-                ),
-                alt.Tooltip(
-                    'pct_change:Q',
-                    title='Pct change',
-                    format='.0%'
-                )
-            ]
-        ).project(
-            type='mercator'
-        )
+                format='.0%'
+            )
+        ]
+    ).project(
+        type='mercator'
     )
+)
 
-    # st.altair_chart(complaints_map)
-
-    top_10_precincts = (
-        change_by_precinct_filtered_to_more_than_threshold_instances
-        .head(10)
-        .index
-    )
-
-    top_10_trend_line_chart = (
-        normalized_by_year_by_command
-        .loc[reference_start_year:focus_end_year,top_10_precincts]
-        .reset_index()
-        .where(lambda row: row['command_normalized'] != 'nan').dropna()
-        # .dropna(subset='command_normalized')
-        .pipe(alt.Chart, title='Annual measure')
-        .mark_line(
-            point='transparent'
+shading = (
+        alt.Chart(ranges)
+        .mark_rect(
+            opacity=0.1
         )
         .encode(
-            x=alt.X(
-                'incident_year:Q',
-                title='Incident year',
-                axis=alt.Axis(
-                    format='.0f',
-                    tickMinStep=1
-                )
-            ),
-            y=alt.Y(
-                'count_complaints:Q',
-                title='Complaints'
-            ),
+            x='start:Q',
+            x2='end:Q',
+            y=alt.value(0),
+            y2=alt.value(250),
             color=alt.Color(
-                'command_normalized:N',
+                'range',
+                # legend=None
+            ),
+            tooltip=alt.value(None)
+        )
+    )
+
+
+precincts_rank_chart =(
+    precincts_ranks
+    .loc[reference_start_year:focus_end_year,top_10_precincts]
+    .reset_index()
+    .pipe(alt.Chart, title='Annual rank')
+    .mark_line(
+        point=True
+    )
+    .encode(
+        x=alt.X(
+            'incident_year:Q',
+            title='Incident year',
+            axis=alt.Axis(
+                format='.0f',
+                tickMinStep=1
+            ),
+        ),
+        y=alt.Y(
+            'rank',
+            scale=alt.Scale(
+                reverse=True
+            ),
+        ),
+        color='command_normalized',
+        tooltip=[
+            'command_normalized',
+            'rank'
+        ]
+    )
+)
+
+top_10_trend_line_chart = (
+    normalized_by_year_by_command
+    .loc[reference_start_year:focus_end_year,top_10_precincts]
+    .reset_index()
+    .where(lambda row: row['command_normalized'] != 'nan').dropna()
+    # .dropna(subset='command_normalized')
+    .pipe(alt.Chart, title='Annual measure')
+    .mark_line(
+        point='transparent'
+    )
+    .encode(
+        x=alt.X(
+            'incident_year:Q',
+            title='Incident year',
+            axis=alt.Axis(
+                format='.0f',
+                tickMinStep=1
+            )
+        ),
+        y=alt.Y(
+            'count_complaints:Q',
+            title='Complaints'
+        ),
+        color=alt.Color(
+            'command_normalized:N',
+            title='Precinct/command'
+        ),
+        tooltip=[
+            alt.Tooltip(
+                'command_normalized',
                 title='Precinct/command'
             ),
-            tooltip=[
-                alt.Tooltip(
-                    'command_normalized',
-                    title='Precinct/command'
-                ),
-                alt.Tooltip(
-                    'count_complaints',
-                    title='Complaints'
-                )
-            ]
+            alt.Tooltip(
+                'count_complaints',
+                title='Complaints'
+            )
+        ]
+    )
+)
+
+
+cases_map = (
+    alt.Chart(precincts)
+    .mark_geoshape(
+        color='white',
+        stroke='lightgrey'
+    )
+) + (
+    alt.Chart(
+        precincts
+    )
+    .transform_calculate(
+        command_normalized = 'toString(datum.properties.Precinct)'
+    )
+    .transform_lookup(
+        lookup='command_normalized',
+        from_=alt.LookupData(
+            data=cases_summary.reset_index(),
+            key='command_normalized',
+            fields=[case_summary_selected]
         )
     )
-
-    ranges = pd.DataFrame({
-        'start':[reference_start_year, focus_start_year],
-        'end':[reference_end_year, focus_end_year],
-        'range':['Reference years','Focus years']
-    })
-
-    shading = (
-            alt.Chart(ranges)
-            .mark_rect(
-                opacity=0.1
-            )
-            .encode(
-                x='start:Q',
-                x2='end:Q',
-                y=alt.value(0),
-                y2=alt.value(250),
-                color=alt.Color(
-                    'range',
-                    # legend=None
-                ),
-                tooltip=alt.value(None)
-            )
-        )
-
-    # st.altair_chart(
-    #     (top_10_trend_line_chart + shading)
-    #     .resolve_scale(
-    #         color='independent'    
-    #     ),
-    #     use_container_width=True
-    # )
-
-    precincts_ranks = (
-        normalized_by_year_by_command
-        .unstack()
-        .drop(columns='nan')
-        .rank(
-            axis=1,
-            method='min',
-            ascending=False
-        )
-        .stack()
-        .rename('rank')
-    )
-
-    precincts_rank_chart =(
-        precincts_ranks
-        .loc[reference_start_year:focus_end_year,top_10_precincts]
-        .reset_index()
-        .pipe(alt.Chart, title='Annual rank')
-        .mark_line(
-            point=True
-        )
-        .encode(
-            x=alt.X(
-                'incident_year:Q',
-                title='Incident year',
-                axis=alt.Axis(
-                    format='.0f',
-                    tickMinStep=1
-                ),
+    .mark_geoshape()
+    .encode(
+        color=alt.Color(
+            f'{case_summary_selected}:Q',
+            title=case_summary_selected,
+            scale=alt.Scale(scheme='purplered'),
+            # legend=alt.Legend(
+            #     format='.0%'
+            # )
+        ),
+        tooltip=[
+            alt.Tooltip(
+                'command_normalized:N',
+                title='Precinct'
             ),
-            y=alt.Y(
-                'rank',
-                scale=alt.Scale(
-                    reverse=True
-                ),
-            ),
-            color='command_normalized',
-            tooltip=[
-                'command_normalized',
-                'rank'
-            ]
-        )
-    )
-
-    # st.altair_chart(
-    #     (precincts_rank_chart + shading)
-    #     .resolve_scale(
-    #         color='independent'    
-    #     ),
-    #     use_container_width=True
-    # )
-
-    # output = BytesIO()
-    # # workbook = xlsxwriter.Workbook(output, {'in_memory': True})
-
-    # with pd.ExcelWriter(path=output, mode='w') as writer:
-
-    #     # parameters_sheet = workbook.add_worksheet(name='parameters')
-    #     # parameters_sheet.write('A1', complaints_title)
-
-    #     (
-    #         change_by_precinct_filtered__labeled
-    #         .to_excel(
-    #             writer,
-    #             sheet_name='pct_change'
-    #         )
-    #     )
-
-    #     (
-    #         normalized_by_year_by_command
-    #         .unstack()
-    #         .to_excel(
-    #             writer,
-    #             sheet_name='by_precinct_by_year'
-    #         )
-    #     )
-
-
-    #     st.download_button(
-    #         label="Download Excel workbook",
-    #         data=output.getvalue(),
-    #         file_name="workbook.xlsx",
-    #         mime="application/vnd.ms-excel"
-    #     )
-
-
-    # st.download_button(
-    #     label='Download pct change',
-    #     data=(
-    #             pd.concat([
-    #             pd.DataFrame({'Parameters':complaints_params}),
-    #             change_by_precinct_filtered__labeled.reset_index()
-    #         ])
-    #         .to_csv(index=False)
-    #     ),
-    #     file_name='complaints_pct_change.csv',
-    #     mime='text/csv'
-    # )
-
-    # st.download_button(
-    #     label='Download annual detail',
-    #     data=(
-    #             pd.concat([
-    #             pd.DataFrame({'Parameters':complaints_params}),
-    #             (
-    #                 normalized_by_year_by_command
-    #                 .rename_axis(index=['Year','Precinct/command'])
-    #                 .unstack()
-    #             )
-    #         ])
-    #         .to_csv()
-    #     ),
-    #     file_name='complaints_by_precinct_by_year.csv',
-    #     mime='text/csv'
-    # )
-
-# with cases_column:
-
-    ## summarize cases
-
-    if with_settlement_only_selected:
-        cases_subset = (
-            cases
-            [
-                cases['Total City Payout AMT'] > 0
-            ]
-        )
-
-    else:
-        cases_subset = cases.copy(deep=True)
-
-
-    if case_summary_selected == 'Count of cases':
-
-        cases_summary = (
-            cases_subset
-            .groupby('command_normalized')
-            .size()
-            .div(normalizer)
-            .sort_values(ascending=False)
-            .rename(case_summary_selected)
-        )
-
-    elif case_summary_selected == 'Settlement grand total':
-
-        cases_summary = (
-            cases_subset
-            .groupby('command_normalized')
-            ['Total City Payout AMT']
-            .sum()
-            .div(normalizer)
-            .sort_values(ascending=False)
-            .rename(case_summary_selected)
-        )
-
-    elif case_summary_selected == 'Median settlement':
-
-        cases_summary = (
-            cases_subset
-            .groupby('command_normalized')
-            ['Total City Payout AMT']
-            .median()
-            .sort_values(ascending=False)
-            .rename(case_summary_selected)
-        )
-
-    cases_params = (
-        f"{case_summary_selected} by precinct",
-        f"{'per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
-        f"{'Showing only cases with settlement payment' if with_settlement_only_selected else ''}"
-    )
-
-    cases_title = '\n\n'.join(cases_params)
-
-    # st.markdown(cases_title)
-
-    # st.dataframe(
-    #     cases_summary
-    #     .reset_index()
-    #     .rename(columns={
-    #         'command_normalized':'Precinct/command',
-    #     })
-    #     .set_index('Precinct/command')
-    #     .style.format({
-    #         'Count of cases':'{:,.0f}',
-    #         'Settlement grand total':'$ {:,.2f}',
-    #         'Median settlement':'$ {:,.2f}'
-    #     })
-    # )
-
-    cases_map = (
-        alt.Chart(precincts)
-        .mark_geoshape(
-            color='white',
-            stroke='lightgrey'
-        )
-    ) + (
-        alt.Chart(
-            precincts
-        )
-        .transform_calculate(
-            command_normalized = 'toString(datum.properties.Precinct)'
-        )
-        .transform_lookup(
-            lookup='command_normalized',
-            from_=alt.LookupData(
-                data=cases_summary.reset_index(),
-                key='command_normalized',
-                fields=[case_summary_selected]
-            )
-        )
-        .mark_geoshape()
-        .encode(
-            color=alt.Color(
+            alt.Tooltip(
                 f'{case_summary_selected}:Q',
-                title=case_summary_selected,
-                scale=alt.Scale(scheme='purplered'),
-                # legend=alt.Legend(
-                #     format='.0%'
-                # )
-            ),
-            tooltip=[
-                alt.Tooltip(
-                    'command_normalized:N',
-                    title='Precinct'
-                ),
-                alt.Tooltip(
-                    f'{case_summary_selected}:Q',
-                    # title='Pct change',
-                    # format='.0%'
-                )
-            ]
-        ).project(
-            type='mercator'
-        )
+                # title='Pct change',
+                # format='.0%'
+            )
+        ]
+    ).project(
+        type='mercator'
     )
+)
+
+
+## layout and place elements
 
 
 
@@ -927,3 +820,68 @@ with st.container():
             file_name='complaints_by_precinct_by_year.csv',
             mime='text/csv'
         )
+
+
+        # output = BytesIO()
+        # # workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+
+        # with pd.ExcelWriter(path=output, mode='w') as writer:
+
+        #     # parameters_sheet = workbook.add_worksheet(name='parameters')
+        #     # parameters_sheet.write('A1', complaints_title)
+
+        #     (
+        #         change_by_precinct_filtered__labeled
+        #         .to_excel(
+        #             writer,
+        #             sheet_name='pct_change'
+        #         )
+        #     )
+
+        #     (
+        #         normalized_by_year_by_command
+        #         .unstack()
+        #         .to_excel(
+        #             writer,
+        #             sheet_name='by_precinct_by_year'
+        #         )
+        #     )
+
+
+        #     st.download_button(
+        #         label="Download Excel workbook",
+        #         data=output.getvalue(),
+        #         file_name="workbook.xlsx",
+        #         mime="application/vnd.ms-excel"
+        #     )
+
+
+        # st.download_button(
+        #     label='Download pct change',
+        #     data=(
+        #             pd.concat([
+        #             pd.DataFrame({'Parameters':complaints_params}),
+        #             change_by_precinct_filtered__labeled.reset_index()
+        #         ])
+        #         .to_csv(index=False)
+        #     ),
+        #     file_name='complaints_pct_change.csv',
+        #     mime='text/csv'
+        # )
+
+        # st.download_button(
+        #     label='Download annual detail',
+        #     data=(
+        #             pd.concat([
+        #             pd.DataFrame({'Parameters':complaints_params}),
+        #             (
+        #                 normalized_by_year_by_command
+        #                 .rename_axis(index=['Year','Precinct/command'])
+        #                 .unstack()
+        #             )
+        #         ])
+        #         .to_csv()
+        #     ),
+        #     file_name='complaints_by_precinct_by_year.csv',
+        #     mime='text/csv'
+        # )
