@@ -921,31 +921,46 @@ with st.container():
 
     with ccrb_download_col:
 
+        complaints_pct_change_output = (
+            pd.concat([
+                pd.Series(
+                    complaints_params,
+                    name='params'
+                ),
+                (
+                    change_by_precinct_filtered__labeled
+                    .reset_index()
+                )
+            ],axis=1)
+        )
+
         st.download_button(
-            label='Download pct change',
-            data=(
-                    pd.concat([
-                    pd.DataFrame({'Parameters':complaints_params}),
-                    change_by_precinct_filtered__labeled.reset_index()
-                ])
-                .to_csv(index=False)
-            ),
+            label='Download complaints pct change',
+            data=complaints_pct_change_output.to_csv(index=False),
             file_name='complaints_pct_change.csv',
             mime='text/csv'
         )
 
+        complaints_annual_detail_output = (
+            pd.concat([
+                pd.Series(
+                    complaints_params,
+                    name='params'
+                ),
+                (
+                    normalized_by_year_by_command
+                    .rename_axis(index=['Year','Precinct/command'])
+                    .unstack('Year')
+                    .reset_index()
+                )
+            ],axis=1)
+        )
+
         st.download_button(
-            label='Download annual detail',
+            label='Download complaints by precinct by year',
             data=(
-                    pd.concat([
-                    pd.DataFrame({'Parameters':complaints_params}),
-                    (
-                        normalized_by_year_by_command
-                        .rename_axis(index=['Year','Precinct/command'])
-                        .unstack()
-                    )
-                ])
-                .to_csv()
+                complaints_annual_detail_output
+                .to_csv(index=False)
             ),
             file_name='complaints_by_precinct_by_year.csv',
             mime='text/csv'
@@ -1015,3 +1030,28 @@ with st.container():
         #     file_name='complaints_by_precinct_by_year.csv',
         #     mime='text/csv'
         # )
+    
+    with cases_download_col:
+
+
+        cases_output = pd.concat([
+            pd.Series(
+                cases_params,
+                name='params'
+            ),
+            (
+                cases_summary
+                .reset_index()
+                .rename(columns={
+                    'command_normalized':'Precinct/command',
+                })
+            )
+        ],axis=1)
+
+        
+        st.download_button(
+            label='Download cases summary',
+            data = cases_output.to_csv(index=False),
+            file_name='cases_summary.csv',
+            mime='txt/csv'
+        )
