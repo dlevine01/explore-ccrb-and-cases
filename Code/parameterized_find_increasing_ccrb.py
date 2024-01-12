@@ -460,8 +460,9 @@ top_10_precincts = (
 
 precincts_ranks = (
     normalized_by_year_by_command
+    .loc[:,change_by_precinct_filtered_to_more_than_threshold_instances.index]
     .unstack()
-    .drop(columns='nan')
+    # .drop(columns='nan')
     .rank(
         axis=1,
         method='min',
@@ -534,6 +535,7 @@ elif case_summary_selected == 'Median settlement':
         .sort_values(ascending=False)
         .rename(case_summary_selected)
     )
+
 
 cases_params = (
     f"{case_summary_selected} by precinct",
@@ -863,9 +865,11 @@ with st.container():
     ccrb_title_col, cases_title_col = st.columns(2, gap='small')
 
     with ccrb_title_col:
+        st.write('## CCRB Complaints')
         st.write(complaints_title)
     
     with cases_title_col:
+        st.write('## Cases (litigation)')
         st.write(cases_title)
 
 # tables
