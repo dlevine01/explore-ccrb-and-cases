@@ -792,7 +792,10 @@ precincts_rank_chart =(
                 reverse=True
             ),
         ),
-        color='command_normalized',
+        color=alt.Color(
+            'command_normalized',
+            legend=alt.Legend(columns=2)
+        ),
         tooltip=[
             'command_normalized',
             'rank'
