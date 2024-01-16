@@ -268,7 +268,7 @@ with st.expander(label='Set options',expanded=True):
         options=(
             'None',
             'Currently active officers',
-            'Index crimes'
+            '2023 Index crimes'
         ),
         horizontal=True
     )
@@ -287,14 +287,14 @@ with st.expander(label='Set options',expanded=True):
     )
 
     reference_start_year, reference_end_year = st.slider(
-        label='Reference years (annual mean):',
+        label='Reference years (i.e. baseline years, years to compare from):',
         min_value=2000,
         max_value=2023,
         value=(2014,2020)
     )
 
     focus_start_year, focus_end_year = st.slider(
-        label='Focus years (annual mean):',
+        label='Focus years (i.e. current years of interest):',
         min_value=2000,
         max_value=2023,
         value=(2021,2023)
@@ -352,7 +352,7 @@ substantiated_filter = (
 
 normalizer = (
     active_officers_by_command if normalize_by_selected == 'Currently active officers' 
-    else index_crimes if normalize_by_selected == 'Index crimes'
+    else index_crimes if normalize_by_selected == '2023 Index crimes'
     else 1
 )
 
@@ -445,13 +445,21 @@ change_by_precinct_filtered_to_more_than_threshold_instances = (
     ]
 )
 
+reference_years_column_label = f"{reference_start_year}-{reference_end_year} (annual mean)"
+focus_years_column_label = f"{focus_start_year}-{focus_end_year} (annual mean)"
+
 change_by_precinct_filtered__labeled = (
     change_by_precinct_filtered_to_more_than_threshold_instances
+    [[
+        'pct_change',
+        'reference_years',
+        'focus_years'
+    ]]
     .reset_index()
     .rename(columns={
         'command_normalized':'Precinct/command',
-        'reference_years':'Reference years (annual mean)',
-        'focus_years':'Focus years (annual mean)',
+        'reference_years':reference_years_column_label,
+        'focus_years':focus_years_column_label,
         'pct_change':'Pct change'
     })
     .set_index('Precinct/command')
@@ -1087,8 +1095,8 @@ with st.container():
         st.dataframe(
             change_by_precinct_filtered__labeled
             .style.format({
-                'Reference years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
-                'Focus years (annual mean)':'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+                reference_years_column_label:'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
+                focus_years_column_label:'{:.3f}' if isinstance(normalizer, pd.Series) else '{:.1f}',
                 'Pct change':'{:.0%}'
             })
         )
@@ -1101,6 +1109,7 @@ with st.container():
                 'command_normalized':'Precinct/command',
             })
             .set_index('Precinct/command')
+            .sort_values(by='Count of cases', ascending=False)
             .style.format({
                 'Count of cases':'{:,.0f}',
                 'Settlement grand total':'$ {:,.2f}',
