@@ -483,8 +483,8 @@ complaints_params = (
 complaints_title = '\n\n'.join(complaints_params)
 
 ranges = pd.DataFrame({
-    'start':[reference_start_year, focus_start_year],
-    'end':[reference_end_year, focus_end_year],
+    'start':[reference_start_year - 0.4, focus_start_year + 0.4],
+    'end':[reference_end_year - 0.4, focus_end_year + 0.4],
     'range':['Reference years','Focus years']
 })
 
@@ -693,7 +693,7 @@ average_trend_chart = (
     )
     .pipe(alt.Chart)
     .mark_line(
-        strokeWidth=4,
+        strokeWidth=3,
         color='grey',
         strokeDash=(4,3)
     )
@@ -712,6 +712,7 @@ average_trend_chart = (
         ),
         color='Average'
     )
+    .properties(height=250)
 )
 
 precincts_rank_chart =(
@@ -733,24 +734,39 @@ precincts_rank_chart =(
         ),
         y=alt.Y(
             'rank',
+            title='Rank',
             scale=alt.Scale(
                 reverse=True
             ),
         ),
         color=alt.Color(
             'command_normalized',
+            title='Precinct/command',
             legend=alt.Legend(columns=2)
         ),
         tooltip=[
-            'command_normalized',
-            'rank'
+            alt.Tooltip(
+                'incident_year:Q',
+                title='Incident year'
+            ),
+            alt.Tooltip(
+                'command_normalized',
+                title='Precinct/command'
+            ),
+            alt.Tooltip(
+            'rank',
+            title='Rank'
+            )
         ],
         strokeWidth=alt.condition(
             highlight, 
             alt.value(3), 
             alt.value(0.5)
         )
-    ).add_params(highlight)
+    )
+    .add_params(highlight)
+    .properties(height=250)
+
 )
 
 
