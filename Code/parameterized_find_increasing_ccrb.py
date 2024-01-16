@@ -620,467 +620,7 @@ cases_params = (
 cases_title = '\n\n'.join(cases_params)
 
 
-## build visuals
 
-highlight = alt.selection_point(
-    on='click', 
-    fields=['command_normalized'], 
-    # nearest=True,
-    empty=False,
-    bind='legend',
-    toggle=False
-)
-
-base_map = (
-    alt.Chart(precincts)
-    .mark_geoshape(
-        color='white',
-        stroke='lightgrey'
-    )
-)
-
-complaints_map = base_map + (
-    alt.Chart(
-        precincts,
-        title=f"Change in number of CCRB complaints {complaints_params[1]}"
-    )
-    .transform_calculate(
-        command_normalized = 'toString(datum.properties.Precinct)'
-    )
-    .transform_lookup(
-        lookup='command_normalized',
-        from_=alt.LookupData(
-            data=change_by_precinct_filtered_to_more_than_threshold_instances.reset_index(),
-            key='command_normalized',
-            fields=['pct_change']
-        )
-    )
-    .mark_geoshape()
-    .encode(
-        color=alt.Color(
-            'pct_change:Q',
-            title='Pct change',
-            scale=alt.Scale(scheme='purpleorange', domainMid=0),
-            legend=alt.Legend(
-                format='.0%',
-                orient='left'
-            )
-        ),
-        stroke=alt.condition(
-            highlight, 
-            alt.value('black'), 
-            alt.value(None)
-        ),
-        strokeWidth=alt.condition(
-            highlight, 
-            alt.value(3), 
-            alt.value(0.5)
-        ),
-        tooltip=[
-            alt.Tooltip(
-                'command_normalized:N',
-                title='Precinct'
-            ),
-            alt.Tooltip(
-                'pct_change:Q',
-                title='Pct change',
-                format='.0%'
-            )
-        ]
-    ).project(
-        type='mercator'
-    )
-    .add_params(
-        highlight
-    )
-)
-
-shading = (
-    alt.Chart(ranges)
-    .mark_rect(
-        opacity=0.1
-    )
-    .encode(
-        x='start:Q',
-        x2='end:Q',
-        y=alt.value(0),
-        y2=alt.value(250),
-        color=alt.Color(
-            'range',
-            title='   ',
-            sort='descending',
-            scale=alt.Scale(
-                range=['lightgrey','lightblue']
-            ),
-            legend=alt.Legend(
-                orient='bottom'
-            )
-        ),
-        tooltip=alt.value(None)
-    )
-)
-
-top_10_trend_line_chart = (
-    normalized_by_year_by_command
-    .loc[reference_start_year:focus_end_year,top_10_precincts]
-    .reset_index()
-    .where(lambda row: row['command_normalized'] != 'nan').dropna()
-    # .dropna(subset='command_normalized')
-    .pipe(alt.Chart, title=f'Annual complaints {complaints_params[1]}')
-    .mark_line(
-        point='transparent'
-    )
-    .encode(
-        x=alt.X(
-            'incident_year:Q',
-            title='Incident year',
-            axis=alt.Axis(
-                format='.0f',
-                tickMinStep=1
-            )
-        ),
-        y=alt.Y(
-            'count_complaints:Q',
-            title='Complaints'
-        ),
-        color=alt.Color(
-            'command_normalized:N',
-            title='Precinct/command',
-            legend=alt.Legend(
-                columns=2,
-                orient='left'
-            )
-        ),
-        strokeWidth=alt.condition(
-            highlight, 
-            alt.value(3), 
-            alt.value(0.5)
-        ),
-        tooltip=[
-            alt.Tooltip(
-                'command_normalized',
-                title='Precinct/command'
-            ),
-            alt.Tooltip(
-                'count_complaints',
-                title='Complaints'
-            )
-        ]
-    )
-    .add_params(
-        highlight
-    )
-)
-
-average_trend_chart = (
-    average_complaints
-    .loc[reference_start_year:focus_end_year]
-    .reset_index()
-    .assign(
-        Average = 'Average'
-    )
-    .pipe(alt.Chart)
-    .mark_line(
-        strokeWidth=3,
-        color='grey',
-        strokeDash=(4,3)
-    )
-    .encode(
-        x=alt.X(
-            'incident_year:Q',
-            title='Incident year',
-            axis=alt.Axis(
-                format='.0f',
-                tickMinStep=1
-            )
-        ),
-        y=alt.Y(
-            'count_complaints:Q',
-            title='Complaints'
-        ),
-        color=alt.Color(
-            'Average',
-            title=' ',
-            legend=alt.Legend(orient='left')
-        )
-    )
-    .properties(height=250)
-)
-
-precincts_rank_chart =(
-    precincts_ranks
-    .loc[reference_start_year:focus_end_year,top_10_precincts]
-    .reset_index()
-    .pipe(alt.Chart, title='Annual rank')
-    .mark_line(
-        point=True
-    )
-    .encode(
-        x=alt.X(
-            'incident_year:Q',
-            title='Incident year',
-            axis=alt.Axis(
-                format='.0f',
-                tickMinStep=1
-            ),
-        ),
-        y=alt.Y(
-            'rank',
-            title='Rank',
-            scale=alt.Scale(
-                reverse=True
-            ),
-        ),
-        color=alt.Color(
-            'command_normalized',
-            title='Precinct/command',
-            legend=alt.Legend(
-                columns=2,
-                orient='left'
-            )
-        ),
-        tooltip=[
-            alt.Tooltip(
-                'incident_year:Q',
-                title='Incident year'
-            ),
-            alt.Tooltip(
-                'command_normalized',
-                title='Precinct/command'
-            ),
-            alt.Tooltip(
-            'rank',
-            title='Rank'
-            )
-        ],
-        strokeWidth=alt.condition(
-            highlight, 
-            alt.value(3), 
-            alt.value(0.5)
-        )
-    )
-    .add_params(highlight)
-    .properties(height=250)
-
-)
-
-
-cases_count_map = (
-    base_map + (
-    alt.Chart(
-        precincts,
-        title=f'Count of cases {cases_params[1]}'
-    )
-    .transform_calculate(
-        command_normalized = 'toString(datum.properties.Precinct)'
-    )
-    .transform_lookup(
-        lookup='command_normalized',
-        from_=alt.LookupData(
-            data=(
-                cases_summary.reset_index()
-            ),
-            key='command_normalized',
-            fields=['Count of cases']
-        )
-    )
-    .mark_geoshape()
-    .encode(
-        color=alt.Color(
-            'Count of cases:Q',
-            # title=case_summary_selected,
-            scale=alt.Scale(scheme='purplered'),
-            legend=alt.Legend(
-                format=',.0f'
-            )
-        ),
-        stroke=alt.condition(
-            highlight, 
-            alt.value('black'), 
-            alt.value(None)
-        ),
-        strokeWidth=alt.condition(
-            highlight, 
-            alt.value(3), 
-            alt.value(0.5)
-        ),
-        tooltip=[
-            alt.Tooltip(
-                'command_normalized:N',
-                title='Precinct'
-            ),
-            alt.Tooltip(
-                'Count of cases:Q',
-                # title='Pct change',
-                # format='.0%'
-            )
-        ]
-    ).project(
-        type='mercator'
-    ).add_params(
-        highlight
-    )
-    )
-)
-
-settlement_total_map = (
-    base_map + (
-    alt.Chart(
-        precincts,
-        title=f'Settlement total {cases_params[1]}'
-    )
-    .transform_calculate(
-        command_normalized = 'toString(datum.properties.Precinct)'
-    )
-    .transform_lookup(
-        lookup='command_normalized',
-        from_=alt.LookupData(
-            data=(
-                cases_summary.reset_index()
-            ),
-            key='command_normalized',
-            fields=['Settlement grand total']
-        )
-    )
-    .mark_geoshape()
-    .encode(
-        color=alt.Color(
-            'Settlement grand total:Q',
-            # title=case_summary_selected,
-            scale=alt.Scale(scheme='purples'),
-            legend=alt.Legend(
-                format='$,.0f'
-            )
-        ),
-        stroke=alt.condition(
-            highlight, 
-            alt.value('black'), 
-            alt.value(None)
-        ),
-        strokeWidth=alt.condition(
-            highlight, 
-            alt.value(3), 
-            alt.value(0.5)
-        ),
-        tooltip=[
-            alt.Tooltip(
-                'command_normalized:N',
-                title='Precinct'
-            ),
-            alt.Tooltip(
-                'Settlement grand total:Q',
-                format='$,.0f'
-            )
-        ]
-    ).project(
-        type='mercator'
-    ).add_params(
-        highlight
-    )
-    )
-)
-
-median_settlement_map = (
-    base_map + (
-    alt.Chart(
-        precincts,
-        title='Median settlement'
-    )
-    .transform_calculate(
-        command_normalized = 'toString(datum.properties.Precinct)'
-    )
-    .transform_lookup(
-        lookup='command_normalized',
-        from_=alt.LookupData(
-            data=(
-                cases_summary.reset_index()
-            ),
-            key='command_normalized',
-            fields=['Median settlement']
-        )
-    )
-    .mark_geoshape()
-    .encode(
-        color=alt.Color(
-            'Median settlement:Q',
-            scale=alt.Scale(scheme='reds'),
-            legend=alt.Legend(
-                format='$,.0f'
-            )
-        ),
-        stroke=alt.condition(
-            highlight, 
-            alt.value('black'), 
-            alt.value(None)
-        ),
-        strokeWidth=alt.condition(
-            highlight, 
-            alt.value(3), 
-            alt.value(0.5)
-        ),
-        tooltip=[
-            alt.Tooltip(
-                'command_normalized:N',
-                title='Precinct'
-            ),
-            alt.Tooltip(
-                'Median settlement:Q',
-                format='$,.0f'
-            )
-        ]
-    ).project(
-        type='mercator'
-    ).add_params(
-        highlight
-    )
-    )
-)
-
-
-# viz = alt.HConcatChart([
-#     alt.VConcatChart([
-#         complaints_map,
-#         (
-#             (top_10_trend_line_chart + shading + average_trend_chart)
-#             .resolve_scale(
-#                 color='independent'    
-#             )
-#         ),
-#         (
-#             (precincts_rank_chart + shading)
-#             .resolve_scale(
-#                 color='independent'    
-#             )
-#         )
-#     ]),
-#     cases_map
-# ])
-
-viz = (
-    (
-        complaints_map & (
-            (top_10_trend_line_chart + shading + average_trend_chart)
-            .resolve_scale(
-                color='independent'    
-            )
-        ) & (
-           (precincts_rank_chart + shading)
-            .resolve_scale(
-                color='independent'    
-            )
-        )
-    ).resolve_scale(color='independent') | (
-        cases_count_map
-        &
-        settlement_total_map
-        &
-        median_settlement_map
-    ).resolve_scale(
-        color='independent'
-    )
-).configure_concat(
-    spacing=100
-)
 
 
 
@@ -1133,6 +673,470 @@ with st.container():
         )
 
 # jumbo altair linked viz
+
+## build visuals
+
+with st.spinner(text='reloading maps and charts...'):
+    highlight = alt.selection_point(
+        on='click', 
+        fields=['command_normalized'], 
+        # nearest=True,
+        empty=False,
+        bind='legend',
+        toggle=False
+    )
+
+    base_map = (
+        alt.Chart(precincts)
+        .mark_geoshape(
+            color='white',
+            stroke='lightgrey'
+        )
+    )
+
+    complaints_map = base_map + (
+        alt.Chart(
+            precincts,
+            title=f"Change in number of CCRB complaints {complaints_params[1]}"
+        )
+        .transform_calculate(
+            command_normalized = 'toString(datum.properties.Precinct)'
+        )
+        .transform_lookup(
+            lookup='command_normalized',
+            from_=alt.LookupData(
+                data=change_by_precinct_filtered_to_more_than_threshold_instances.reset_index(),
+                key='command_normalized',
+                fields=['pct_change']
+            )
+        )
+        .mark_geoshape()
+        .encode(
+            color=alt.Color(
+                'pct_change:Q',
+                title='Pct change',
+                scale=alt.Scale(scheme='purpleorange', domainMid=0),
+                legend=alt.Legend(
+                    format='.0%',
+                    orient='left'
+                )
+            ),
+            stroke=alt.condition(
+                highlight, 
+                alt.value('black'), 
+                alt.value(None)
+            ),
+            strokeWidth=alt.condition(
+                highlight, 
+                alt.value(3), 
+                alt.value(0.5)
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    'command_normalized:N',
+                    title='Precinct'
+                ),
+                alt.Tooltip(
+                    'pct_change:Q',
+                    title='Pct change',
+                    format='.0%'
+                )
+            ]
+        ).project(
+            type='mercator'
+        )
+        .add_params(
+            highlight
+        )
+    )
+
+    shading = (
+        alt.Chart(ranges)
+        .mark_rect(
+            opacity=0.1
+        )
+        .encode(
+            x='start:Q',
+            x2='end:Q',
+            y=alt.value(0),
+            y2=alt.value(250),
+            color=alt.Color(
+                'range',
+                title='   ',
+                sort='descending',
+                scale=alt.Scale(
+                    range=['lightgrey','lightblue']
+                ),
+                legend=alt.Legend(
+                    orient='bottom'
+                )
+            ),
+            tooltip=alt.value(None)
+        )
+    )
+
+    top_10_trend_line_chart = (
+        normalized_by_year_by_command
+        .loc[reference_start_year:focus_end_year,top_10_precincts]
+        .reset_index()
+        .where(lambda row: row['command_normalized'] != 'nan').dropna()
+        # .dropna(subset='command_normalized')
+        .pipe(alt.Chart, title=f'Annual complaints {complaints_params[1]}')
+        .mark_line(
+            point='transparent'
+        )
+        .encode(
+            x=alt.X(
+                'incident_year:Q',
+                title='Incident year',
+                axis=alt.Axis(
+                    format='.0f',
+                    tickMinStep=1
+                )
+            ),
+            y=alt.Y(
+                'count_complaints:Q',
+                title='Complaints'
+            ),
+            color=alt.Color(
+                'command_normalized:N',
+                title='Precinct/command',
+                legend=alt.Legend(
+                    columns=2,
+                    orient='left'
+                )
+            ),
+            strokeWidth=alt.condition(
+                highlight, 
+                alt.value(3), 
+                alt.value(0.5)
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    'command_normalized',
+                    title='Precinct/command'
+                ),
+                alt.Tooltip(
+                    'count_complaints',
+                    title='Complaints'
+                )
+            ]
+        )
+        .add_params(
+            highlight
+        )
+    )
+
+    average_trend_chart = (
+        average_complaints
+        .loc[reference_start_year:focus_end_year]
+        .reset_index()
+        .assign(
+            Average = 'Average'
+        )
+        .pipe(alt.Chart)
+        .mark_line(
+            strokeWidth=3,
+            color='grey',
+            strokeDash=(4,3)
+        )
+        .encode(
+            x=alt.X(
+                'incident_year:Q',
+                title='Incident year',
+                axis=alt.Axis(
+                    format='.0f',
+                    tickMinStep=1
+                )
+            ),
+            y=alt.Y(
+                'count_complaints:Q',
+                title='Complaints'
+            ),
+            color=alt.Color(
+                'Average',
+                title=' ',
+                legend=alt.Legend(orient='left')
+            )
+        )
+        .properties(height=250)
+    )
+
+    precincts_rank_chart =(
+        precincts_ranks
+        .loc[reference_start_year:focus_end_year,top_10_precincts]
+        .reset_index()
+        .pipe(alt.Chart, title='Annual rank')
+        .mark_line(
+            point=True
+        )
+        .encode(
+            x=alt.X(
+                'incident_year:Q',
+                title='Incident year',
+                axis=alt.Axis(
+                    format='.0f',
+                    tickMinStep=1
+                ),
+            ),
+            y=alt.Y(
+                'rank',
+                title='Rank',
+                scale=alt.Scale(
+                    reverse=True
+                ),
+            ),
+            color=alt.Color(
+                'command_normalized',
+                title='Precinct/command',
+                legend=alt.Legend(
+                    columns=2,
+                    orient='left'
+                )
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    'incident_year:Q',
+                    title='Incident year'
+                ),
+                alt.Tooltip(
+                    'command_normalized',
+                    title='Precinct/command'
+                ),
+                alt.Tooltip(
+                'rank',
+                title='Rank'
+                )
+            ],
+            strokeWidth=alt.condition(
+                highlight, 
+                alt.value(3), 
+                alt.value(0.5)
+            )
+        )
+        .add_params(highlight)
+        .properties(height=250)
+
+    )
+
+
+    cases_count_map = (
+        base_map + (
+        alt.Chart(
+            precincts,
+            title=f'Count of cases {cases_params[1]}'
+        )
+        .transform_calculate(
+            command_normalized = 'toString(datum.properties.Precinct)'
+        )
+        .transform_lookup(
+            lookup='command_normalized',
+            from_=alt.LookupData(
+                data=(
+                    cases_summary.reset_index()
+                ),
+                key='command_normalized',
+                fields=['Count of cases']
+            )
+        )
+        .mark_geoshape()
+        .encode(
+            color=alt.Color(
+                'Count of cases:Q',
+                # title=case_summary_selected,
+                scale=alt.Scale(scheme='purplered'),
+                legend=alt.Legend(
+                    format=',.0f'
+                )
+            ),
+            stroke=alt.condition(
+                highlight, 
+                alt.value('black'), 
+                alt.value(None)
+            ),
+            strokeWidth=alt.condition(
+                highlight, 
+                alt.value(3), 
+                alt.value(0.5)
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    'command_normalized:N',
+                    title='Precinct'
+                ),
+                alt.Tooltip(
+                    'Count of cases:Q',
+                    # title='Pct change',
+                    # format='.0%'
+                )
+            ]
+        ).project(
+            type='mercator'
+        ).add_params(
+            highlight
+        )
+        )
+    )
+
+    settlement_total_map = (
+        base_map + (
+        alt.Chart(
+            precincts,
+            title=f'Settlement total {cases_params[1]}'
+        )
+        .transform_calculate(
+            command_normalized = 'toString(datum.properties.Precinct)'
+        )
+        .transform_lookup(
+            lookup='command_normalized',
+            from_=alt.LookupData(
+                data=(
+                    cases_summary.reset_index()
+                ),
+                key='command_normalized',
+                fields=['Settlement grand total']
+            )
+        )
+        .mark_geoshape()
+        .encode(
+            color=alt.Color(
+                'Settlement grand total:Q',
+                # title=case_summary_selected,
+                scale=alt.Scale(scheme='purples'),
+                legend=alt.Legend(
+                    format='$,.0f'
+                )
+            ),
+            stroke=alt.condition(
+                highlight, 
+                alt.value('black'), 
+                alt.value(None)
+            ),
+            strokeWidth=alt.condition(
+                highlight, 
+                alt.value(3), 
+                alt.value(0.5)
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    'command_normalized:N',
+                    title='Precinct'
+                ),
+                alt.Tooltip(
+                    'Settlement grand total:Q',
+                    format='$,.0f'
+                )
+            ]
+        ).project(
+            type='mercator'
+        ).add_params(
+            highlight
+        )
+        )
+    )
+
+    median_settlement_map = (
+        base_map + (
+        alt.Chart(
+            precincts,
+            title='Median settlement'
+        )
+        .transform_calculate(
+            command_normalized = 'toString(datum.properties.Precinct)'
+        )
+        .transform_lookup(
+            lookup='command_normalized',
+            from_=alt.LookupData(
+                data=(
+                    cases_summary.reset_index()
+                ),
+                key='command_normalized',
+                fields=['Median settlement']
+            )
+        )
+        .mark_geoshape()
+        .encode(
+            color=alt.Color(
+                'Median settlement:Q',
+                scale=alt.Scale(scheme='reds'),
+                legend=alt.Legend(
+                    format='$,.0f'
+                )
+            ),
+            stroke=alt.condition(
+                highlight, 
+                alt.value('black'), 
+                alt.value(None)
+            ),
+            strokeWidth=alt.condition(
+                highlight, 
+                alt.value(3), 
+                alt.value(0.5)
+            ),
+            tooltip=[
+                alt.Tooltip(
+                    'command_normalized:N',
+                    title='Precinct'
+                ),
+                alt.Tooltip(
+                    'Median settlement:Q',
+                    format='$,.0f'
+                )
+            ]
+        ).project(
+            type='mercator'
+        ).add_params(
+            highlight
+        )
+        )
+    )
+
+
+    # viz = alt.HConcatChart([
+    #     alt.VConcatChart([
+    #         complaints_map,
+    #         (
+    #             (top_10_trend_line_chart + shading + average_trend_chart)
+    #             .resolve_scale(
+    #                 color='independent'    
+    #             )
+    #         ),
+    #         (
+    #             (precincts_rank_chart + shading)
+    #             .resolve_scale(
+    #                 color='independent'    
+    #             )
+    #         )
+    #     ]),
+    #     cases_map
+    # ])
+
+    viz = (
+        (
+            complaints_map & (
+                (top_10_trend_line_chart + shading + average_trend_chart)
+                .resolve_scale(
+                    color='independent'    
+                )
+            ) & (
+            (precincts_rank_chart + shading)
+                .resolve_scale(
+                    color='independent'    
+                )
+            )
+        ).resolve_scale(color='independent') | (
+            cases_count_map
+            &
+            settlement_total_map
+            &
+            median_settlement_map
+        ).resolve_scale(
+            color='independent'
+        )
+    ).configure_concat(
+        spacing=100
+    )
+
 with st.container():
 
         st.altair_chart(
