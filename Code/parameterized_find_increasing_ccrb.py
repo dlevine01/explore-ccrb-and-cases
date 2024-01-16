@@ -27,91 +27,91 @@ PRECINCTS = ['1', '5', '6', '7', '9', '10', '13', '14', '17', '18', '19', '20', 
        '103', '104', '105', '106', '107', '108', '109', '110', '111', '112',
        '113', '114', '115', '120', '121', '122', '123']
 
-
-
 @st.cache_data(show_spinner='Loading CCRB records...')
 def load_ccrb():
 
-    ccrb_allegations = pd.read_csv(
-        'https://data.cityofnewyork.us/api/views/6xgr-kwjq/rows.csv?accessType=DOWNLOAD',
-        dtype={'Tax ID':str},
-        parse_dates=['As Of Date']
-        )
+    # ccrb_allegations = pd.read_csv(
+    #     'https://data.cityofnewyork.us/api/views/6xgr-kwjq/rows.csv?accessType=DOWNLOAD',
+    #     dtype={'Tax ID':str},
+    #     parse_dates=['As Of Date']
+    #     )
 
-    ccrb_complaints = pd.read_csv(
-        'https://data.cityofnewyork.us/api/views/2mby-ccnw/rows.csv?accessType=DOWNLOAD',
-        dtype={'Tax ID':str},
-        parse_dates=['Incident Date', 'CCRB Received Date','Close Date']
-    )
+    # ccrb_complaints = pd.read_csv(
+    #     'https://data.cityofnewyork.us/api/views/2mby-ccnw/rows.csv?accessType=DOWNLOAD',
+    #     dtype={'Tax ID':str},
+    #     parse_dates=['Incident Date', 'CCRB Received Date','Close Date']
+    # )
 
-    ccrb_complaints['Incident Date'] = pd.to_datetime(ccrb_complaints['Incident Date'], errors='coerce')
+    # ccrb_complaints['Incident Date'] = pd.to_datetime(ccrb_complaints['Incident Date'], errors='coerce')
     
-    ccrb_allegations = ccrb_allegations.merge(
-        ccrb_complaints.drop(columns='As Of Date'), 
-        on='Complaint Id'
-    )
+    # ccrb_allegations = ccrb_allegations.merge(
+    #     ccrb_complaints.drop(columns='As Of Date'), 
+    #     on='Complaint Id'
+    # )
 
-    ccrb_allegations = (
-        ccrb_allegations
-        .assign(
-            command_normalized = (
-                ccrb_allegations['Officer Command At Incident']
-                .str.upper()
-                .str.replace('(?<=\d) *TH','',regex=True)
-                .str.replace('(?<=\d) *ND','',regex=True)
-                .str.replace('(?<=\d) *RD','',regex=True)
-                .str.replace('PCT[\. ]*','',regex=True)
-                .str.replace('CMD','')
-                .str.replace('PRECINCT','')
-                .str.replace('PRE','')
-                .str.replace('DET(ECTIVE)*','',regex=True)
-                .str.replace('COMMAND','')
-                .str.replace('SQUAD','')
-                .str.replace('MTS','14')
-                .str.replace('MIDTOWN SOUTH','14')
-                .str.replace('MTN','18')
-                .str.replace('MIDTOWN NORTH','18')
-                .str.replace('CPK','22')
-                .str.replace('POLICE SERVICE AREA','PSA')
-                .str.replace('E.S.U.','E S U')
-                .str.replace('NARC BBX','NARCBBX')
-                .str.replace('NARCOTICS BOROUGH BRONX','NARCBBX')
-                .str.replace('NARCBBN DIVISION','NARCBBN')
-                .str.replace('BROOKLYN NORTH NARCOTICS','NARCBBN')
-                .str.replace('NARCOTICS BOROUGH BROOKLYN NORTH','NARCBBN')
-                .str.replace('BNNARC','NARCBBN')
-                .str.replace('NARCBNN','NARCBBN')
-                .str.replace('BROOKLYN SOUTH NARCOTICS','NARCBBS')
-                .str.replace('NARC BBS','NARCBBS')
-                .str.replace('NARCOTICS BOROUGH BROOKLYN SOUTH','NARCBBS')
-                .str.replace('NARCOTICS BORO BROOKLYN SOUTH','NARCBBS')
-                .str.replace('BROOKLYN SOUTH NARCOTICS DISTRICT','NARCBBS')
-                .str.replace('NARCOTICS BORO STATEN ISLAND','NARCBSI')
-                .str.replace('NARCOTICS BOROUGH STATEN ISLAND','NARCBSI')
-                .str.replace('QS NARC','NARCBQS')
-                .str.replace('MANHATTAN SOUTH NARCOTICS DISTRICT','NARCBMS')
-                .str.replace('NARCOTICS BORO MANHATTAN NORTH','NARCBMN')
-                .str.replace('WARRANT SECTION','WARRSEC')
-                .str.replace('QS GANG','GANG QS')
-                .str.replace('MANHATTAN GANG','GANG M')
-                .str.replace('GANG MANHATTAN','GANG M')
-                .str.replace('QUEENS GANG','GANG Q')
-                .str.replace('STATEN ISLAND GANGS DIVISION','GANG SI')
-                .str.replace('GANG  BROOKLYN SOUTH', 'GANG BS')
-                .str.replace('BROOKLYN SOUTH GANG','GANG BS')
-                .str.replace('BROOKLYN SOUTH GANG UNIT','GANG BS')
-                .str.replace('BN GANG UNIT','GANG BN')
-                .mask(lambda a: a == 'UNIDENTIFIED')
-                .mask(lambda a: a == 'UNKNOWN')
-                .str.strip()
-                # .str.replace(' ','')
-                .apply(pd.to_numeric, errors = 'ignore')
-                .astype(str)
-            )
-        )
-    )
+    # ccrb_allegations = (
+    #     ccrb_allegations
+    #     .assign(
+    #         command_normalized = (
+    #             ccrb_allegations['Officer Command At Incident']
+    #             .str.upper()
+    #             .str.replace('(?<=\d) *TH','',regex=True)
+    #             .str.replace('(?<=\d) *ND','',regex=True)
+    #             .str.replace('(?<=\d) *RD','',regex=True)
+    #             .str.replace('PCT[\. ]*','',regex=True)
+    #             .str.replace('CMD','')
+    #             .str.replace('PRECINCT','')
+    #             .str.replace('PRE','')
+    #             .str.replace('DET(ECTIVE)*','',regex=True)
+    #             .str.replace('COMMAND','')
+    #             .str.replace('SQUAD','')
+    #             .str.replace('MTS','14')
+    #             .str.replace('MIDTOWN SOUTH','14')
+    #             .str.replace('MTN','18')
+    #             .str.replace('MIDTOWN NORTH','18')
+    #             .str.replace('CPK','22')
+    #             .str.replace('POLICE SERVICE AREA','PSA')
+    #             .str.replace('E.S.U.','E S U', regex=False)
+    #             .str.replace('NARC BBX','NARCBBX')
+    #             .str.replace('NARCOTICS BOROUGH BRONX','NARCBBX')
+    #             .str.replace('NARCBBN DIVISION','NARCBBN')
+    #             .str.replace('BROOKLYN NORTH NARCOTICS','NARCBBN')
+    #             .str.replace('NARCOTICS BOROUGH BROOKLYN NORTH','NARCBBN')
+    #             .str.replace('BNNARC','NARCBBN')
+    #             .str.replace('NARCBNN','NARCBBN')
+    #             .str.replace('BROOKLYN SOUTH NARCOTICS','NARCBBS')
+    #             .str.replace('NARC BBS','NARCBBS')
+    #             .str.replace('NARCOTICS BOROUGH BROOKLYN SOUTH','NARCBBS')
+    #             .str.replace('NARCOTICS BORO BROOKLYN SOUTH','NARCBBS')
+    #             .str.replace('BROOKLYN SOUTH NARCOTICS DISTRICT','NARCBBS')
+    #             .str.replace('NARCOTICS BORO STATEN ISLAND','NARCBSI')
+    #             .str.replace('NARCOTICS BOROUGH STATEN ISLAND','NARCBSI')
+    #             .str.replace('QS NARC','NARCBQS')
+    #             .str.replace('MANHATTAN SOUTH NARCOTICS DISTRICT','NARCBMS')
+    #             .str.replace('NARCOTICS BORO MANHATTAN NORTH','NARCBMN')
+    #             .str.replace('WARRANT SECTION','WARRSEC')
+    #             .str.replace('QS GANG','GANG QS')
+    #             .str.replace('MANHATTAN GANG','GANG M')
+    #             .str.replace('GANG MANHATTAN','GANG M')
+    #             .str.replace('QUEENS GANG','GANG Q')
+    #             .str.replace('STATEN ISLAND GANGS DIVISION','GANG SI')
+    #             .str.replace('GANG  BROOKLYN SOUTH', 'GANG BS')
+    #             .str.replace('BROOKLYN SOUTH GANG','GANG BS')
+    #             .str.replace('BROOKLYN SOUTH GANG UNIT','GANG BS')
+    #             .str.replace('BN GANG UNIT','GANG BN')
+    #             .mask(lambda a: a == 'UNIDENTIFIED')
+    #             .mask(lambda a: a == 'UNKNOWN')
+    #             .str.strip()
+    #             # .str.replace(' ','')
+    #             .apply(pd.to_numeric, errors = 'ignore')
+    #             .astype(str)
+    #         )
+    #     )
+    # )
 
-    ccrb_allegations['CCRB disposition substantiated'] = ccrb_allegations['CCRB Allegation Disposition'].str.contains('Substantiated')
+    # ccrb_allegations['CCRB disposition substantiated'] = ccrb_allegations['CCRB Allegation Disposition'].str.contains('Substantiated')
+
+    ccrb_allegations = pd.read_parquet('Data/Processed Data/ccrb_allegations_with_labels.parquet')
 
     return ccrb_allegations
 
@@ -137,83 +137,85 @@ def load_precincts():
     
 @st.cache_data(show_spinner='Loading officers roster...')
 def load_officers_by_command():
-    roster = pd.read_csv(
-        'https://data.cityofnewyork.us/api/views/2fir-qns4/rows.csv?date=20231205&accessType=DOWNLOAD',
-        parse_dates=['Last Reported Active Date'],
-        true_values=['Yes'],
-        false_values=['No'],
-        dtype={'Tax ID':str}
-    )
+    # roster = pd.read_csv(
+    #     'https://data.cityofnewyork.us/api/views/2fir-qns4/rows.csv?date=20231205&accessType=DOWNLOAD',
+    #     parse_dates=['Last Reported Active Date'],
+    #     true_values=['Yes'],
+    #     false_values=['No'],
+    #     dtype={'Tax ID':str}
+    # )
 
-    roster = (
-        roster
-        .assign(
-            command_normalized = (
-                ccrb_allegations['Officer Command At Incident']
-                .str.upper()
-                .str.replace('(?<=\d) *TH','',regex=True)
-                .str.replace('(?<=\d) *ND','',regex=True)
-                .str.replace('(?<=\d) *RD','',regex=True)
-                .str.replace('PCT[\. ]*','',regex=True)
-                .str.replace('CMD','')
-                .str.replace('PRECINCT','')
-                .str.replace('PRE','')
-                .str.replace('DET(ECTIVE)*','',regex=True)
-                .str.replace('COMMAND','')
-                .str.replace('SQUAD','')
-                .str.replace('MTS','14')
-                .str.replace('MIDTOWN SOUTH','14')
-                .str.replace('MTN','18')
-                .str.replace('MIDTOWN NORTH','18')
-                .str.replace('CPK','22')
-                .str.replace('POLICE SERVICE AREA','PSA')
-                .str.replace('E.S.U.','E S U')
-                .str.replace('NARC BBX','NARCBBX')
-                .str.replace('NARCOTICS BOROUGH BRONX','NARCBBX')
-                .str.replace('NARCBBN DIVISION','NARCBBN')
-                .str.replace('BROOKLYN NORTH NARCOTICS','NARCBBN')
-                .str.replace('NARCOTICS BOROUGH BROOKLYN NORTH','NARCBBN')
-                .str.replace('BNNARC','NARCBBN')
-                .str.replace('NARCBNN','NARCBBN')
-                .str.replace('BROOKLYN SOUTH NARCOTICS','NARCBBS')
-                .str.replace('NARC BBS','NARCBBS')
-                .str.replace('NARCOTICS BOROUGH BROOKLYN SOUTH','NARCBBS')
-                .str.replace('NARCOTICS BORO BROOKLYN SOUTH','NARCBBS')
-                .str.replace('BROOKLYN SOUTH NARCOTICS DISTRICT','NARCBBS')
-                .str.replace('NARCOTICS BORO STATEN ISLAND','NARCBSI')
-                .str.replace('NARCOTICS BOROUGH STATEN ISLAND','NARCBSI')
-                .str.replace('QS NARC','NARCBQS')
-                .str.replace('MANHATTAN SOUTH NARCOTICS DISTRICT','NARCBMS')
-                .str.replace('NARCOTICS BORO MANHATTAN NORTH','NARCBMN')
-                .str.replace('WARRANT SECTION','WARRSEC')
-                .str.replace('QS GANG','GANG QS')
-                .str.replace('MANHATTAN GANG','GANG M')
-                .str.replace('GANG MANHATTAN','GANG M')
-                .str.replace('QUEENS GANG','GANG Q')
-                .str.replace('STATEN ISLAND GANGS DIVISION','GANG SI')
-                .str.replace('GANG  BROOKLYN SOUTH', 'GANG BS')
-                .str.replace('BROOKLYN SOUTH GANG','GANG BS')
-                .str.replace('BROOKLYN SOUTH GANG UNIT','GANG BS')
-                .str.replace('BN GANG UNIT','GANG BN')
-                .mask(lambda a: a == 'UNIDENTIFIED')
-                .mask(lambda a: a == 'UNKNOWN')
-                .str.strip()
-                # .str.replace(' ','')
-                .apply(pd.to_numeric, errors = 'ignore')
-                .astype(str)
-            )
-        )
-    )
+    # roster = (
+    #     roster
+    #     .assign(
+    #         command_normalized = (
+    #             ccrb_allegations['Officer Command At Incident']
+    #             .str.upper()
+    #             .str.replace('(?<=\d) *TH','',regex=True)
+    #             .str.replace('(?<=\d) *ND','',regex=True)
+    #             .str.replace('(?<=\d) *RD','',regex=True)
+    #             .str.replace('PCT[\. ]*','',regex=True)
+    #             .str.replace('CMD','')
+    #             .str.replace('PRECINCT','')
+    #             .str.replace('PRE','')
+    #             .str.replace('DET(ECTIVE)*','',regex=True)
+    #             .str.replace('COMMAND','')
+    #             .str.replace('SQUAD','')
+    #             .str.replace('MTS','14')
+    #             .str.replace('MIDTOWN SOUTH','14')
+    #             .str.replace('MTN','18')
+    #             .str.replace('MIDTOWN NORTH','18')
+    #             .str.replace('CPK','22')
+    #             .str.replace('POLICE SERVICE AREA','PSA')
+    #             .str.replace('E.S.U.','E S U', regex=False)
+    #             .str.replace('NARC BBX','NARCBBX')
+    #             .str.replace('NARCOTICS BOROUGH BRONX','NARCBBX')
+    #             .str.replace('NARCBBN DIVISION','NARCBBN')
+    #             .str.replace('BROOKLYN NORTH NARCOTICS','NARCBBN')
+    #             .str.replace('NARCOTICS BOROUGH BROOKLYN NORTH','NARCBBN')
+    #             .str.replace('BNNARC','NARCBBN')
+    #             .str.replace('NARCBNN','NARCBBN')
+    #             .str.replace('BROOKLYN SOUTH NARCOTICS','NARCBBS')
+    #             .str.replace('NARC BBS','NARCBBS')
+    #             .str.replace('NARCOTICS BOROUGH BROOKLYN SOUTH','NARCBBS')
+    #             .str.replace('NARCOTICS BORO BROOKLYN SOUTH','NARCBBS')
+    #             .str.replace('BROOKLYN SOUTH NARCOTICS DISTRICT','NARCBBS')
+    #             .str.replace('NARCOTICS BORO STATEN ISLAND','NARCBSI')
+    #             .str.replace('NARCOTICS BOROUGH STATEN ISLAND','NARCBSI')
+    #             .str.replace('QS NARC','NARCBQS')
+    #             .str.replace('MANHATTAN SOUTH NARCOTICS DISTRICT','NARCBMS')
+    #             .str.replace('NARCOTICS BORO MANHATTAN NORTH','NARCBMN')
+    #             .str.replace('WARRANT SECTION','WARRSEC')
+    #             .str.replace('QS GANG','GANG QS')
+    #             .str.replace('MANHATTAN GANG','GANG M')
+    #             .str.replace('GANG MANHATTAN','GANG M')
+    #             .str.replace('QUEENS GANG','GANG Q')
+    #             .str.replace('STATEN ISLAND GANGS DIVISION','GANG SI')
+    #             .str.replace('GANG  BROOKLYN SOUTH', 'GANG BS')
+    #             .str.replace('BROOKLYN SOUTH GANG','GANG BS')
+    #             .str.replace('BROOKLYN SOUTH GANG UNIT','GANG BS')
+    #             .str.replace('BN GANG UNIT','GANG BN')
+    #             .mask(lambda a: a == 'UNIDENTIFIED')
+    #             .mask(lambda a: a == 'UNKNOWN')
+    #             .str.strip()
+    #             # .str.replace(' ','')
+    #             .apply(pd.to_numeric, errors = 'ignore')
+    #             .astype(str)
+    #         )
+    #     )
+    # )
         
-    active_officers_by_command = (
-        roster
-        [
-            roster['Active Per Last Reported Status']
-        ]
-        .groupby('command_normalized')
-        ['Tax ID']
-        .nunique()
-    )
+    # active_officers_by_command = (
+    #     roster
+    #     [
+    #         roster['Active Per Last Reported Status']
+    #     ]
+    #     .groupby('command_normalized')
+    #     ['Tax ID']
+    #     .nunique()
+    # )
+
+    active_officers_by_command = pd.read_parquet('Data/Processed Data/active_officers_by_command.parquet')
 
     return active_officers_by_command
 
