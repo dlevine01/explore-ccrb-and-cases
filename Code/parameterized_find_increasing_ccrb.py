@@ -678,8 +678,13 @@ shading = (
         y2=alt.value(250),
         color=alt.Color(
             'range',
+            title='   ',
+            sort='descending',
+            scale=alt.Scale(
+                range=['lightgrey','lightblue']
+            ),
             legend=alt.Legend(
-                orient='left'
+                orient='bottom'
             )
         ),
         tooltip=alt.value(None)
@@ -766,6 +771,7 @@ average_trend_chart = (
         ),
         color=alt.Color(
             'Average',
+            title=' ',
             legend=alt.Legend(orient='left')
         )
     )
@@ -1043,6 +1049,8 @@ viz = (
     ).resolve_scale(
         color='independent'
     )
+).configure_concat(
+    spacing=100
 )
 
 
@@ -1099,7 +1107,7 @@ with st.container():
 
         st.altair_chart(
             viz, 
-            use_container_width=True
+            # use_container_width=True
         )
 
 # download buttons
