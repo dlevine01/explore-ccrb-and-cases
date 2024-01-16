@@ -317,15 +317,15 @@ with st.expander(label='Set options',expanded=True):
 
     # case types filter
 
-    case_summary_selected = st.radio(
-        label='Summarize cases by:',
-        options=(
-            'Count of cases',
-            'Settlement grand total',
-            'Median settlement'
-        ),
-        horizontal=True
-    )
+    # case_summary_selected = st.radio(
+    #     label='Summarize cases by:',
+    #     options=(
+    #         'Count of cases',
+    #         'Settlement grand total',
+    #         'Median settlement'
+    #     ),
+    #     horizontal=True
+    # )
 
 
 
@@ -578,12 +578,13 @@ cases_summary = (
         ),
         how='outer'
     )
-    .sort_values(by=case_summary_selected, ascending=False)
+    # .sort_values(by=case_summary_selected, ascending=False)
 )
 
 cases_params = (
-    f"{case_summary_selected} by precinct",
-    f"{'per '+ normalize_by_selected if (normalize_by_selected != 'None') and (case_summary_selected != 'Median settlement') else ''}",
+    f"Count of cases and Settlement grand total{', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
+    "and Median settlement",
+    "by precinct",
     f"{'Showing only cases with settlement payment' if with_settlement_only_selected else ''}"
 )
 
