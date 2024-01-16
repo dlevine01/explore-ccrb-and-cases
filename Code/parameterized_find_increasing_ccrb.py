@@ -215,7 +215,10 @@ def load_officers_by_command():
     #     .nunique()
     # )
 
-    active_officers_by_command = pd.read_parquet('Data/Processed Data/active_officers_by_command.parquet')
+    active_officers_by_command = (
+        pd.read_parquet('Data/Processed Data/active_officers_by_command.parquet')
+        ['count_officers']
+    )
 
     return active_officers_by_command
 
@@ -238,18 +241,26 @@ def load_cases():
 
 ccrb_allegations = load_ccrb()
 precincts = load_precincts()
-active_officers_by_command = (
-    load_officers_by_command()
-    .reindex(
-        ccrb_allegations
-        ['command_normalized']
-        .dropna()
-        .drop_duplicates()
-        .values
-    )
-)
+# active_officers_by_command = (
+#     load_officers_by_command()
+#     .reindex(
+#         ccrb_allegations
+#         ['command_normalized']
+#         .dropna()
+#         .drop_duplicates()
+#         .values
+#     )
+# )
+active_officers_by_command = load_officers_by_command()
 index_crimes = load_index_crimes()
 cases = load_cases()
+
+st.dataframe(
+    active_officers_by_command
+    # .set_index('command_normalized')
+    # .sort_values(ascending=False)
+
+)
 
 ## options sidebar
 
@@ -371,6 +382,12 @@ count_by_year_by_command = (
     .rename('count_complaints')
 )
 
+st.dataframe(
+    (
+    count_by_year_by_command
+    .div(normalizer)
+    )
+)
 
 normalized_by_year_by_command = (
     count_by_year_by_command
