@@ -502,40 +502,108 @@ else:
     cases_subset = cases.copy(deep=True)
 
 
-if case_summary_selected == 'Count of cases':
+# if case_summary_selected == 'Count of cases':
 
-    cases_summary = (
+#     cases_summary = (
+#         cases_subset
+#         .groupby('command_normalized')
+#         .size()
+#         .div(normalizer)
+#         .sort_values(ascending=False)
+#         .rename(case_summary_selected)
+#     )
+
+# elif case_summary_selected == 'Settlement grand total':
+
+#     cases_summary = (
+#         cases_subset
+#         .groupby('command_normalized')
+#         ['Total City Payout AMT']
+#         .sum()
+#         .div(normalizer)
+#         .sort_values(ascending=False)
+#         .rename(case_summary_selected)
+#     )
+
+# elif case_summary_selected == 'Median settlement':
+
+#     cases_summary = (
+#         cases_subset
+#         .groupby('command_normalized')
+#         ['Total City Payout AMT']
+#         .median()
+#         .sort_values(ascending=False)
+#         .rename(case_summary_selected)
+#     )
+    
+    # cases_summary = (
+    #     cases_subset
+    #     .groupby('command_normalized')
+    #     .agg(
+    #         cases_count = pd.NamedAgg(column=),
+    #         total_payout = pd.NamedAgg(column='Total City Payout AMT')
+    #     )
+    # )
+
+
+cases_summary = (
+    (
         cases_subset
         .groupby('command_normalized')
         .size()
         .div(normalizer)
-        .sort_values(ascending=False)
-        .rename(case_summary_selected)
+        .rename('Count of cases')
+        .to_frame()
     )
-
-elif case_summary_selected == 'Settlement grand total':
-
-    cases_summary = (
+    .join(
+    (
         cases_subset
-        .groupby('command_normalized')
-        ['Total City Payout AMT']
-        .sum()
-        .div(normalizer)
-        .sort_values(ascending=False)
-        .rename(case_summary_selected)
+            .groupby('command_normalized')
+            ['Total City Payout AMT']
+            .sum()
+            .div(normalizer)
+            .sort_values(ascending=False)
+            .rename('Settlement grand total')
+        ),
+        how='outer'
     )
-
-elif case_summary_selected == 'Median settlement':
-
-    cases_summary = (
-        cases_subset
-        .groupby('command_normalized')
-        ['Total City Payout AMT']
-        .median()
-        .sort_values(ascending=False)
-        .rename(case_summary_selected)
+    .join(
+        (
+            cases_subset
+            .groupby('command_normalized')
+            ['Total City Payout AMT']
+            .median()
+            .sort_values(ascending=False)
+            .rename('Median settlement')
+        ),
+        how='outer'
     )
+    .sort_values(by=case_summary_selected, ascending=False)
+)
 
+
+# elif case_summary_selected == 'Settlement grand total':
+
+#     cases_summary = (
+#         cases_subset
+#         .groupby('command_normalized')
+#         ['Total City Payout AMT']
+#         .sum()
+#         .div(normalizer)
+#         .sort_values(ascending=False)
+#         .rename(case_summary_selected)
+#     )
+
+# elif case_summary_selected == 'Median settlement':
+
+#     cases_summary = (
+#         cases_subset
+#         .groupby('command_normalized')
+#         ['Total City Payout AMT']
+#         .median()
+#         .sort_values(ascending=False)
+#         .rename(case_summary_selected)
+#     )
 
 cases_params = (
     f"{case_summary_selected} by precinct",
