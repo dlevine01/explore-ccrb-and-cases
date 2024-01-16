@@ -511,8 +511,8 @@ complaints_params = (
 complaints_title = '\n\n'.join(complaints_params)
 
 ranges = pd.DataFrame({
-    'start':[reference_start_year - 0.4, focus_start_year + 0.4],
-    'end':[reference_end_year - 0.4, focus_end_year + 0.4],
+    'start':[reference_start_year - 0.5, focus_start_year - 0.5],
+    'end':[reference_end_year + 0.5, focus_end_year + 0.5],
     'range':['Reference years','Focus years']
 })
 
@@ -802,7 +802,7 @@ with st.spinner(text='reloading maps and charts...'):
                 'command_normalized:N',
                 title='Precinct/command',
                 legend=alt.Legend(
-                    columns=2,
+                    # columns=2,
                     orient='left'
                 )
             ),
@@ -890,7 +890,7 @@ with st.spinner(text='reloading maps and charts...'):
                 'command_normalized',
                 title='Precinct/command',
                 legend=alt.Legend(
-                    columns=2,
+                    # columns=2,
                     orient='left'
                 )
             ),
@@ -1002,7 +1002,7 @@ with st.spinner(text='reloading maps and charts...'):
             color=alt.Color(
                 'Settlement grand total:Q',
                 # title=case_summary_selected,
-                scale=alt.Scale(scheme='purples'),
+                scale=alt.Scale(scheme='goldorange'),
                 legend=alt.Legend(
                     format='$,.0f'
                 )
@@ -1058,7 +1058,7 @@ with st.spinner(text='reloading maps and charts...'):
         .encode(
             color=alt.Color(
                 'Median settlement:Q',
-                scale=alt.Scale(scheme='reds'),
+                scale=alt.Scale(scheme='redpurple'),
                 legend=alt.Legend(
                     format='$,.0f'
                 )
