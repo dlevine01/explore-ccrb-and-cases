@@ -539,7 +539,7 @@ elif case_summary_selected == 'Median settlement':
 
 cases_params = (
     f"{case_summary_selected} by precinct",
-    f"{'per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
+    f"{'per '+ normalize_by_selected if (normalize_by_selected != 'None') and (case_summary_selected != 'Median settlement') else ''}",
     f"{'Showing only cases with settlement payment' if with_settlement_only_selected else ''}"
 )
 
