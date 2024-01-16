@@ -7,6 +7,8 @@ import streamlit as st
 # from io import BytesIO
 # import xlsxwriter
 
+import requests
+
 st.set_page_config(
     layout='wide'
 )
@@ -118,9 +120,22 @@ def load_ccrb():
 @st.cache_data(show_spinner='Loading precincts map...')
 def load_precincts():
 
+    precincts_source_url = 'https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson'
+    
+    # precincts_r = requests.get(precincts_source_url)
+
+    # precincts_json = precincts_r.json()
+
+    # return (
+    #     alt.Data(
+    #         values=precincts_json,
+    #         format=alt.DataFormat(property='features')
+    #     )
+    # )
+
     return (
         alt.Data(
-            url='https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson',
+            url=precincts_source_url,
             format=alt.DataFormat(property='features')
         )
     )
