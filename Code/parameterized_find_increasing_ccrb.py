@@ -255,13 +255,6 @@ active_officers_by_command = load_officers_by_command()
 index_crimes = load_index_crimes()
 cases = load_cases()
 
-st.dataframe(
-    active_officers_by_command
-    # .set_index('command_normalized')
-    # .sort_values(ascending=False)
-
-)
-
 ## options sidebar
 
 with st.expander(label='Set options',expanded=True):
@@ -382,13 +375,6 @@ count_by_year_by_command = (
     .rename('count_complaints')
 )
 
-st.dataframe(
-    (
-    count_by_year_by_command
-    .div(normalizer)
-    )
-)
-
 normalized_by_year_by_command = (
     count_by_year_by_command
     .div(normalizer)
@@ -493,7 +479,7 @@ precincts_ranks = (
 
 complaints_params = (
     f"{'Substantiated' if substantiated_only_selected else 'All'} complaints of type(s): {', '.join(fado_types_selected)}",
-    f"{'per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
+    f"{'per '+ normalize_by_selected.lower() if normalize_by_selected != 'None' else ''}",
     f"Comparing years {reference_start_year}-{reference_end_year} to {focus_start_year}-{focus_end_year}",
     f"{'Showing only geographic precincts' if geographic_precincts_only_selector > 0 else ''}",
     f"{'Showing precincts/commands with at least ' + str(minimum_instances_threshold) + ' complaints in at least one year of each period' if minimum_instances_threshold > 0 else ''}" 
@@ -601,7 +587,8 @@ cases_summary = (
 )
 
 cases_params = (
-    f"Count of cases and Settlement grand total{', per '+ normalize_by_selected if normalize_by_selected != 'None' else ''}",
+    "Count of cases and Settlement grand total",
+    f"{'per '+ normalize_by_selected.lower() if normalize_by_selected != 'None' else ''}",
     "and Median settlement",
     "by precinct",
     f"{'Showing only cases with settlement payment' if with_settlement_only_selected else ''}"
@@ -632,7 +619,7 @@ base_map = (
 complaints_map = base_map + (
     alt.Chart(
         precincts,
-        title='Change in number of CCRB complaints'
+        title=f"Change in number of CCRB complaints {complaints_params[1]}"
     )
     .transform_calculate(
         command_normalized = 'toString(datum.properties.Precinct)'
@@ -716,7 +703,7 @@ top_10_trend_line_chart = (
     .reset_index()
     .where(lambda row: row['command_normalized'] != 'nan').dropna()
     # .dropna(subset='command_normalized')
-    .pipe(alt.Chart, title='Annual complaints')
+    .pipe(alt.Chart, title=f'Annual complaints {complaints_params[1]}')
     .mark_line(
         point='transparent'
     )
@@ -859,7 +846,7 @@ cases_count_map = (
     base_map + (
     alt.Chart(
         precincts,
-        title='Count of cases'
+        title=f'Count of cases {cases_params[1]}'
     )
     .transform_calculate(
         command_normalized = 'toString(datum.properties.Precinct)'
@@ -917,7 +904,7 @@ settlement_total_map = (
     base_map + (
     alt.Chart(
         precincts,
-        title='Settlement total'
+        title=f'Settlement total {cases_params[1]}'
     )
     .transform_calculate(
         command_normalized = 'toString(datum.properties.Precinct)'
