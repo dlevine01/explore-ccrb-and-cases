@@ -610,7 +610,7 @@ cases_summary = (
 )
 
 cases_params = (
-    "Count of cases and Settlement grand total",
+    "Count of cases, Settlement grand total",
     f"{'per '+ normalize_by_selected.lower() if normalize_by_selected != 'None' else ''}",
     "and Median settlement",
     "by precinct",
