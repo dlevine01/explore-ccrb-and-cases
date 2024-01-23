@@ -303,14 +303,14 @@ with st.expander(label='Set options',expanded=True):
     )
 
     reference_start_year, reference_end_year = st.slider(
-        label='Reference years (i.e. baseline years, years to compare from):',
+        label='Reference years (i.e. baseline years, years to compare from) for complaints:',
         min_value=2000,
         max_value=2023,
         value=(2014,2020)
     )
 
     focus_start_year, focus_end_year = st.slider(
-        label='Focus years (i.e. current years of interest):',
+        label='Focus years (i.e. current years of interest) for complaints:',
         min_value=2000,
         max_value=2023,
         value=(2021,2023)
