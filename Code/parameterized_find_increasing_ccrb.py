@@ -688,6 +688,7 @@ cases_params = (
     f"{'per '+ normalize_by_selected.lower() if normalize_by_selected != 'None' else ''}",
     "and Median settlement",
     "by precinct",
+    f"From incidents that occurred {case_years[0]} - {case_years[1]}",
     f"{'Showing only cases with settlement payment' if with_settlement_only_selected else ''}"
 )
 
