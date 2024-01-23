@@ -3,11 +3,12 @@ import pandas as pd
 # import geopandas as gpd
 import altair as alt
 import streamlit as st
+import numpy as np
 
 # from io import BytesIO
 # import xlsxwriter
 
-import requests
+# import requests
 
 st.set_page_config(
     layout='wide'
@@ -336,6 +337,15 @@ with st.expander(label='Set options',expanded=True):
         value=False
     )
 
+    case_years = st.slider(
+        label='Years of occurence of incidents in litigation',
+        min_value=2005,
+        max_value=2023,
+        value=(2013,2023)
+    )
+
+
+
     # case types filter
 
     # case_summary_selected = st.radio(
@@ -518,17 +528,81 @@ ranges = pd.DataFrame({
 
 ## summarize cases
 
+cases_subset = (
+    cases
+    [
+        (cases['Date of Occurrence'].dt.year.ge(case_years[0]))
+        & (cases['Date of Occurrence'].dt.year.le(case_years[1]))
+    ]
+)
+
 if with_settlement_only_selected:
     cases_subset = (
-        cases
+        cases_subset
         [
             cases['Total City Payout AMT'] > 0
         ]
     )
 
-else:
-    cases_subset = cases.copy(deep=True)
 
+with st.expander(label="Show portion of cases selected"):
+        st.altair_chart(
+            (
+                cases
+                .groupby(
+                    pd.Grouper(freq='y',key='Date of Occurrence')
+                )
+                .size()
+                .rename('count cases')
+                .loc['2005-12-31':]
+                .reset_index()
+                .assign(
+                    selected = lambda row: np.where(
+                        (
+                            (row['Date of Occurrence'].dt.year.ge(case_years[0]))
+                            & (row['Date of Occurrence'].dt.year.le(case_years[1]))
+                        ), 
+                        'selected',
+                        'not selected'
+                    )
+                )
+                .pipe(alt.Chart)
+                .mark_bar()
+                .encode(
+                    x=alt.X(
+                        'year(Date of Occurrence):O',
+                        # scale=alt.Scale(
+                        #     domain=(2005, 2023)
+                        # ),
+                        axis=alt.Axis(
+                            bandPosition=1,
+                            labelFlush=False
+                        )
+                    ),
+                    y=alt.Y(
+                        'count cases',
+                        # axis=None
+                        axis=alt.Axis(
+                            offset=-100
+                        )
+                    ),
+                    color=alt.Color(
+                        'selected',
+                        scale=alt.Scale(
+                            domain=['selected','not selected'],
+                            range=['#0a58ca','grey']
+                        ),
+                        legend=None
+                    )
+                )
+                .properties(
+                    height=200
+                )
+            ),
+            use_container_width=True
+        )
+
+        st.write(f"{cases_subset.shape[0]:,.0f} cases selected")
 
 # if case_summary_selected == 'Count of cases':
 
@@ -800,7 +874,7 @@ with st.spinner(text='reloading maps and charts...'):
             ),
             color=alt.Color(
                 'command_normalized:N',
-                title='Precinct/command',
+                title='Precinct/command (Top 10 by pct change)',
                 legend=alt.Legend(
                     # columns=2,
                     orient='left'
@@ -888,7 +962,7 @@ with st.spinner(text='reloading maps and charts...'):
             ),
             color=alt.Color(
                 'command_normalized',
-                title='Precinct/command',
+                title='Precinct/command (Top 10 by pct change)',
                 legend=alt.Legend(
                     # columns=2,
                     orient='left'
