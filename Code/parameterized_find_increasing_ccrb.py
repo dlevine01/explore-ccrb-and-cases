@@ -134,9 +134,16 @@ def load_precincts():
     #     )
     # )
 
-    return (
+    # return (
+    #     alt.Data(
+    #         url=precincts_source_url,
+    #         format=alt.DataFormat(property='features')
+    #     )
+    # )
+
+    return(
         alt.Data(
-            url=precincts_source_url,
+            url='https://raw.githubusercontent.com/dlevine01/explore-ccrb-and-cases/main/Data/Processed%20Data/precincts_census_4326.geojson',
             format=alt.DataFormat(property='features')
         )
     )
@@ -767,6 +774,10 @@ with st.spinner(text='reloading maps and charts...'):
             color='white',
             stroke='lightgrey'
         )
+        .project('mercator')
+        .properties(
+            width=300
+        )
     )
 
     complaints_map = base_map + (
@@ -847,6 +858,9 @@ with st.spinner(text='reloading maps and charts...'):
                 )
             ),
             tooltip=alt.value(None)
+        )
+        .properties(
+            width=250
         )
     )
 
@@ -1166,6 +1180,144 @@ with st.spinner(text='reloading maps and charts...'):
         )
     )
 
+    demographics_maps = (
+        alt.vconcat(
+            (
+                alt.Chart(precincts)
+                .mark_geoshape()
+                .transform_calculate(
+                    command_normalized = 'toString(datum.properties.Precinct)'
+                )
+                .encode(
+                    color=alt.Color(
+                        'properties.White__pct:Q',
+                        title='Pct White',
+                        scale=alt.Scale(
+                            scheme='blues',
+                            domain=(0,1)
+                        ),
+                        legend=alt.Legend(
+                            format='%'
+                        )
+                    ),
+                    stroke=alt.condition(
+                        highlight, 
+                        alt.value('black'), 
+                        alt.value(None)
+                    ),
+                    strokeWidth=alt.condition(
+                        highlight, 
+                        alt.value(2), 
+                        alt.value(0.5)
+                    )
+                )
+                .project('mercator')
+                .properties(height=250)
+                .add_params(highlight)
+            ),
+            (
+                alt.Chart(precincts)
+                .transform_calculate(
+                    command_normalized = 'toString(datum.properties.Precinct)'
+                )
+                .mark_geoshape()
+                .encode(
+                    color=alt.Color(
+                        'properties.Black__pct:Q',
+                        title='Pct Black',
+                        scale=alt.Scale(
+                            scheme='purples',
+                            domain=(0,1)
+                        ),
+                        legend=alt.Legend(
+                            format='%'
+                        )
+                    ),
+                    stroke=alt.condition(
+                        highlight, 
+                        alt.value('black'), 
+                        alt.value(None)
+                    ),
+                    strokeWidth=alt.condition(
+                        highlight, 
+                        alt.value(2), 
+                        alt.value(0.5)
+                    )
+                )
+                .project('mercator')
+                .properties(height=250)
+                .add_params(highlight)
+            ),
+            (
+                alt.Chart(precincts)
+                .transform_calculate(
+                    command_normalized = 'toString(datum.properties.Precinct)'
+                )
+                .mark_geoshape()
+                .encode(
+                    color=alt.Color(
+                        'properties.Asian_pct:Q',
+                        title='Pct Asian',
+                        scale=alt.Scale(
+                            scheme='teals',
+                            domain=(0,1)
+                        ),
+                        legend=alt.Legend(
+                            format='%'
+                        )
+                    ),
+                    stroke=alt.condition(
+                        highlight, 
+                        alt.value('black'), 
+                        alt.value(None)
+                    ),
+                    strokeWidth=alt.condition(
+                        highlight, 
+                        alt.value(2), 
+                        alt.value(0.5)
+                    ),
+                )
+                .project('mercator')
+                .properties(height=250)
+                .add_params(highlight)
+            ),
+            (
+                alt.Chart(precincts)
+                .transform_calculate(
+                    command_normalized = 'toString(datum.properties.Precinct)'
+                )
+                .mark_geoshape()
+                .encode(
+                    color=alt.Color(
+                        'properties.Hispanic__pct:Q',
+                        title='Pct Hispanic',
+                        scale=alt.Scale(
+                            scheme='greens',
+                            domain=(0,1)
+                        ),
+                        legend=alt.Legend(
+                            format='%'
+                        )
+                    ),
+                    stroke=alt.condition(
+                        highlight, 
+                        alt.value('black'), 
+                        alt.value(None)
+                    ),
+                    strokeWidth=alt.condition(
+                        highlight, 
+                        alt.value(2), 
+                        alt.value(0.5)
+                    )
+                )
+                .project('mercator')
+                .properties(height=250)
+                .add_params(highlight)
+            )
+        )
+        .resolve_scale(color='independent')
+    )
+
 
     # viz = alt.HConcatChart([
     #     alt.VConcatChart([
@@ -1207,6 +1359,8 @@ with st.spinner(text='reloading maps and charts...'):
             median_settlement_map
         ).resolve_scale(
             color='independent'
+        ) | (
+            demographics_maps
         )
     ).configure_concat(
         spacing=100
@@ -1218,6 +1372,10 @@ with st.container():
             viz, 
             # use_container_width=True
         )
+
+        # st.altair_chart(
+        #     demographics_maps
+        # )
 
 # download buttons
 with st.container():
