@@ -1187,143 +1187,105 @@ with st.spinner(text='reloading maps and charts...'):
         )
     )
 
-    demographics_maps = (
-        alt.vconcat(
-            (
-                alt.Chart(precincts, title='Demographics')
-                .mark_geoshape()
-                .transform_calculate(
-                    command_normalized = 'toString(datum.properties.Precinct)'
-                )
-                .encode(
-                    color=alt.Color(
-                        'properties.White__pct:Q',
-                        title='Pct White',
-                        scale=alt.Scale(
-                            scheme='blues',
-                            domain=(0,1)
-                        ),
-                        legend=alt.Legend(
-                            format='%'
-                        )
-                    ),
-                    stroke=alt.condition(
-                        highlight, 
-                        alt.value('black'), 
-                        alt.value(None)
-                    ),
-                    strokeWidth=alt.condition(
-                        highlight, 
-                        alt.value(2), 
-                        alt.value(0.5)
-                    )
-                )
-                .project('mercator')
-                .properties(height=250)
-                .add_params(highlight)
+
+    demographics_base = (
+        alt.Chart(precincts)
+        .mark_geoshape()
+        .transform_calculate(
+            command_normalized = 'toString(datum.properties.Precinct)'
+        )
+        .encode(
+            stroke=alt.condition(
+                highlight, 
+                alt.value('black'), 
+                alt.value(None)
             ),
-            (
-                alt.Chart(precincts)
-                .transform_calculate(
-                    command_normalized = 'toString(datum.properties.Precinct)'
-                )
-                .mark_geoshape()
-                .encode(
-                    color=alt.Color(
-                        'properties.Black__pct:Q',
-                        title='Pct Black',
-                        scale=alt.Scale(
-                            scheme='purples',
-                            domain=(0,1)
-                        ),
-                        legend=alt.Legend(
-                            format='%'
-                        )
-                    ),
-                    stroke=alt.condition(
-                        highlight, 
-                        alt.value('black'), 
-                        alt.value(None)
-                    ),
-                    strokeWidth=alt.condition(
-                        highlight, 
-                        alt.value(2), 
-                        alt.value(0.5)
-                    )
-                )
-                .project('mercator')
-                .properties(height=250)
-                .add_params(highlight)
-            ),
-            (
-                alt.Chart(precincts)
-                .transform_calculate(
-                    command_normalized = 'toString(datum.properties.Precinct)'
-                )
-                .mark_geoshape()
-                .encode(
-                    color=alt.Color(
-                        'properties.Asian_pct:Q',
-                        title='Pct Asian',
-                        scale=alt.Scale(
-                            scheme='teals',
-                            domain=(0,1)
-                        ),
-                        legend=alt.Legend(
-                            format='%'
-                        )
-                    ),
-                    stroke=alt.condition(
-                        highlight, 
-                        alt.value('black'), 
-                        alt.value(None)
-                    ),
-                    strokeWidth=alt.condition(
-                        highlight, 
-                        alt.value(2), 
-                        alt.value(0.5)
-                    ),
-                )
-                .project('mercator')
-                .properties(height=250)
-                .add_params(highlight)
-            ),
-            (
-                alt.Chart(precincts)
-                .transform_calculate(
-                    command_normalized = 'toString(datum.properties.Precinct)'
-                )
-                .mark_geoshape()
-                .encode(
-                    color=alt.Color(
-                        'properties.Hispanic__pct:Q',
-                        title='Pct Hispanic',
-                        scale=alt.Scale(
-                            scheme='greens',
-                            domain=(0,1)
-                        ),
-                        legend=alt.Legend(
-                            format='%'
-                        )
-                    ),
-                    stroke=alt.condition(
-                        highlight, 
-                        alt.value('black'), 
-                        alt.value(None)
-                    ),
-                    strokeWidth=alt.condition(
-                        highlight, 
-                        alt.value(2), 
-                        alt.value(0.5)
-                    )
-                )
-                .project('mercator')
-                .properties(height=250)
-                .add_params(highlight)
+            strokeWidth=alt.condition(
+                highlight, 
+                alt.value(2), 
+                alt.value(0.5)
             )
         )
-        .resolve_scale(color='independent')
+        .project('mercator')
+        .properties(height=250)
+        .add_params(highlight)
     )
+
+    white_pct = (
+        demographics_base
+        .encode(
+            color=alt.Color(
+                'properties.White__pct:Q',
+                title='Pct White',
+                scale=alt.Scale(
+                    scheme='blues',
+                    domain=(0,1)
+                ),
+                legend=alt.Legend(
+                    format='%'
+                )
+            ),
+        )
+    )
+
+    black_pct = (
+        demographics_base
+        .encode(
+            color=alt.Color(
+                'properties.Black__pct:Q',
+                title='Pct Black',
+                scale=alt.Scale(
+                    scheme='purples',
+                    domain=(0,1)
+                ),
+                legend=alt.Legend(
+                    format='%'
+                )
+            )
+        )
+    )
+
+    asian_pct = (
+        demographics_base
+        .encode(
+            color=alt.Color(
+                'properties.Asian_pct:Q',
+                title='Pct Asian',
+                scale=alt.Scale(
+                    scheme='teals',
+                    domain=(0,1)
+                ),
+                legend=alt.Legend(
+                    format='%'
+                )
+            )
+        )
+    )
+
+    hispanic_pct = (
+        demographics_base
+        .encode(
+            color=alt.Color(
+                'properties.Hispanic__pct:Q',
+                title='Pct Hispanic',
+                scale=alt.Scale(
+                    scheme='greens',
+                    domain=(0,1)
+                ),
+                legend=alt.Legend(
+                    format='%'
+                )
+            )
+        )
+    )
+
+    demographics_maps = alt.vconcat(
+            white_pct,
+            black_pct,
+            asian_pct,
+            hispanic_pct,
+            title='Demographics'
+        ).resolve_scale(color='independent')
 
 
     # viz = alt.HConcatChart([
