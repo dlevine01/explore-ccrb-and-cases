@@ -150,7 +150,7 @@ def load_precincts():
 
     return (
         alt.Data(
-            url='app/static/precincts_census_4326.geojson',
+            url='app/static/precincts_census_4326_simplified.geojson',
             format=alt.DataFormat(property='features')
         )
     )
