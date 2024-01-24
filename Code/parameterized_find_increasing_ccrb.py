@@ -121,7 +121,7 @@ def load_ccrb():
 @st.cache_data(show_spinner='Loading precincts map...')
 def load_precincts():
 
-    precincts_source_url = 'https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson'
+    # precincts_source_url = 'https://services5.arcgis.com/GfwWNkhOj9bNBqoJ/arcgis/rest/services/NYC_Police_Precincts/FeatureServer/0/query?where=1=1&outFields=Precinct&outSR=4326&f=pgeojson'
     
     # precincts_r = requests.get(precincts_source_url)
 
@@ -141,9 +141,16 @@ def load_precincts():
     #     )
     # )
 
-    return(
+    # return(
+    #     alt.Data(
+    #         url='https://raw.githubusercontent.com/dlevine01/explore-ccrb-and-cases/main/Data/Processed%20Data/precincts_census_4326.geojson',
+    #         format=alt.DataFormat(property='features')
+    #     )
+    # )
+
+    return (
         alt.Data(
-            url='https://raw.githubusercontent.com/dlevine01/explore-ccrb-and-cases/main/Data/Processed%20Data/precincts_census_4326.geojson',
+            url='app/static/precincts_census_4326.geojson',
             format=alt.DataFormat(property='features')
         )
     )
