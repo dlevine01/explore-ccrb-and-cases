@@ -1190,7 +1190,7 @@ with st.spinner(text='reloading maps and charts...'):
     demographics_maps = (
         alt.vconcat(
             (
-                alt.Chart(precincts)
+                alt.Chart(precincts, title='Demographics')
                 .mark_geoshape()
                 .transform_calculate(
                     command_normalized = 'toString(datum.properties.Precinct)'
@@ -1370,7 +1370,7 @@ with st.spinner(text='reloading maps and charts...'):
             demographics_maps
         )
     ).configure_concat(
-        spacing=100
+        spacing=20
     )
 
 with st.container():
