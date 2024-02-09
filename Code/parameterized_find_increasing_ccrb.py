@@ -1279,11 +1279,29 @@ with st.spinner(text='reloading maps and charts...'):
         )
     )
 
+    poverty_pct = (
+        demographics_base
+        .encode(
+            color=alt.Color(
+                'properties.below_150_pct_poverty_level__pct:Q',
+                title='Pct below 150 pct poverty level',
+                scale=alt.Scale(
+                    scheme='oranges',
+                    domain=(0,1)
+                ),
+                legend=alt.Legend(
+                    format='%'
+                )
+            )
+        )
+    )
+
     demographics_maps = alt.vconcat(
             white_pct,
             black_pct,
             asian_pct,
             hispanic_pct,
+            poverty_pct,
             title='Demographics'
         ).resolve_scale(color='independent')
 
