@@ -256,12 +256,12 @@ def load_officers_by_command():
 def load_index_crimes():
     return (
         pd.read_csv(
-            'Data/Processed Data/index_crimes_by_precinct_2023.csv',
+            'Data/Processed Data/index_crimes_by_precinct_2024.csv',
             dtype={'precinct':str}
         )
         .rename(columns={'precinct':'command_normalized'})
         .set_index('command_normalized')
-        ['index_crimes_2023']
+        ['index_crimes_2024']
     )
 
 @st.cache_data(show_spinner='Loading cases...')
@@ -298,7 +298,7 @@ with st.expander(label='Set options',expanded=True):
         options=(
             'None',
             'Currently active officers',
-            '2023 Index crimes'
+            '2024 Index crimes'
         ),
         horizontal=True
     )
@@ -319,15 +319,15 @@ with st.expander(label='Set options',expanded=True):
     reference_start_year, reference_end_year = st.slider(
         label='Reference years (i.e. baseline years, years to compare from) for complaints:',
         min_value=2000,
-        max_value=2023,
+        max_value=2024,
         value=(2014,2020)
     )
 
     focus_start_year, focus_end_year = st.slider(
         label='Focus years (i.e. current years of interest) for complaints:',
         min_value=2000,
-        max_value=2023,
-        value=(2021,2023)
+        max_value=2024,
+        value=(2021,2024)
     )
 
     minimum_instances_threshold = st.slider(
@@ -352,10 +352,10 @@ with st.expander(label='Set options',expanded=True):
     )
 
     case_years = st.slider(
-        label='Years of occurence of incidents in litigation',
+        label='Years of occurrence of incidents in litigation',
         min_value=2005,
-        max_value=2023,
-        value=(2013,2023)
+        max_value=2024,
+        value=(2013,2024)
     )
 
 
@@ -391,7 +391,7 @@ substantiated_filter = (
 
 normalizer = (
     active_officers_by_command if normalize_by_selected == 'Currently active officers' 
-    else index_crimes if normalize_by_selected == '2023 Index crimes'
+    else index_crimes if normalize_by_selected == '2024 Index crimes'
     else 1
 )
 
@@ -564,7 +564,7 @@ with st.expander(label="Show portion of cases selected"):
             (
                 cases
                 .groupby(
-                    pd.Grouper(freq='y',key='Date of Occurrence')
+                    pd.Grouper(freq='YE',key='Date of Occurrence')
                 )
                 .size()
                 .rename('count cases')
@@ -586,7 +586,7 @@ with st.expander(label="Show portion of cases selected"):
                     x=alt.X(
                         'year(Date of Occurrence):O',
                         # scale=alt.Scale(
-                        #     domain=(2005, 2023)
+                        #     domain=(2005, 2024)
                         # ),
                         axis=alt.Axis(
                             bandPosition=1,
