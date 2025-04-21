@@ -308,7 +308,7 @@ with st.expander(label='Set options',expanded=True):
     fado_types_selected = st.multiselect(
         label='FADO types:',
         options=FADO_TYPES,
-        default=FADO_TYPES
+        default=['Force']
     )
 
     substantiated_only_selected = st.toggle(
@@ -320,14 +320,14 @@ with st.expander(label='Set options',expanded=True):
         label='Reference years (i.e. baseline years, years to compare from) for complaints:',
         min_value=2000,
         max_value=2024,
-        value=(2014,2020)
+        value=(2019,2021)
     )
 
     focus_start_year, focus_end_year = st.slider(
         label='Focus years (i.e. current years of interest) for complaints:',
         min_value=2000,
         max_value=2024,
-        value=(2021,2024)
+        value=(2022,2024)
     )
 
     minimum_instances_threshold = st.slider(
@@ -355,7 +355,7 @@ with st.expander(label='Set options',expanded=True):
         label='Years of occurrence of incidents in litigation',
         min_value=2005,
         max_value=2024,
-        value=(2013,2024)
+        value=(2019,2024)
     )
 
 
